@@ -6,9 +6,12 @@ import { exec } from 'child_process';
 import { platform } from 'os';
 
 function openBrowser(url: string) {
-  const command = platform() === 'win32' ? `start ${url}` :
-                  platform() === 'darwin' ? `open ${url}` :
-                  `xdg-open ${url}`;
+  const command =
+    platform() === 'win32'
+      ? `start ${url}`
+      : platform() === 'darwin'
+        ? `open ${url}`
+        : `xdg-open ${url}`;
 
   exec(command, (error) => {
     if (error) {
@@ -58,8 +61,10 @@ async function bootstrap() {
   console.log(`Swagger API docs available at http://localhost:${port}/api`);
   console.log(`WebSocket available at ws://localhost:${port}/chat`);
 
-  // Auto-open the chat interface in browser
-  const chatUrl = `http://localhost:${port}`;
-  openBrowser(chatUrl);
+  // Auto-open the chat interface in browser (only in development)
+  if (process.env.NODE_ENV !== 'production') {
+    const chatUrl = `http://localhost:${port}`;
+    openBrowser(chatUrl);
+  }
 }
 bootstrap();
