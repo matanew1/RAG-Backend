@@ -381,7 +381,7 @@ This project is licensed under the UNLICENSED license.
    - **Start Command**: `pnpm start:prod`
 
 3. **Environment Variables:**
-   Set these as environment secrets in Render:
+   In Render Dashboard → Environment:
    ```
    NODE_ENV=production
    PORT=10000
@@ -396,6 +396,8 @@ This project is licensed under the UNLICENSED license.
    RAG_MAX_TOKENS=1024
    RAG_TOP_K=5
    ```
+   
+   **Or use the render.yaml file** which will automatically configure these during deployment.
 
 4. **Deploy:**
    - Click "Create Web Service"
