@@ -49,6 +49,12 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
         }
 
         body {
@@ -56,8 +62,12 @@
             color: var(--text-main);
             font-family: var(--font-ui);
             height: 100vh;
+            height: 100dvh;
+            /* Dynamic viewport height for mobile */
             overflow: hidden;
             display: flex;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
         /* --- Ambient Aurora Background --- */
@@ -1084,98 +1094,600 @@
             font-family: 'Rubik', sans-serif;
         }
 
-        /* Stat Grid */
-        .stat-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-        }
-
-        .stat-box {
-            background: rgba(255, 255, 255, 0.03);
-            padding: 20px;
-            border-radius: 16px;
-            text-align: center;
-            border: 1px solid var(--border-subtle);
-            transition: 0.3s;
-        }
-
-        .stat-box:hover {
-            background: rgba(255, 255, 255, 0.05);
-            transform: translateY(-3px);
-            border-color: var(--primary-cyan);
-        }
-
-        .stat-val {
-            font-size: 28px;
-            font-weight: 700;
-            font-family: var(--font-display);
-            color: var(--primary-cyan);
-            margin-bottom: 4px;
-        }
-
-        .stat-lbl {
-            font-size: 13px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
         @media (max-width: 768px) {
+            :root {
+                --sidebar-w: 100%;
+            }
+
+            /* Show mobile header */
+            .mobile-header {
+                display: flex;
+            }
+
+            .mobile-menu-btn {
+                display: flex;
+            }
+
+            /* Hide desktop language toggle on mobile */
+            .input-wrapper .lang-toggle-btn {
+                display: none;
+            }
+
             .sidebar {
                 position: fixed;
                 left: -100%;
+                top: 0;
                 height: 100%;
-                box-shadow: 20px 0 50px rgba(0, 0, 0, 0.5);
+                width: 85%;
+                max-width: 300px;
+                box-shadow: 20px 0 50px rgba(0, 0, 0, 0.6);
+                padding: 20px;
+                padding-top: 24px;
+                transition: left 0.3s var(--ease-smooth);
             }
 
             .sidebar.active {
                 left: 0;
             }
 
-            .input-dock {
-                padding: 15px;
+            /* Overlay when sidebar is open */
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.6);
+                z-index: 15;
+                opacity: 0;
+                transition: opacity 0.3s var(--ease-smooth);
             }
 
-            .stat-grid {
-                grid-template-columns: 1fr;
+            .sidebar-overlay.active {
+                display: block;
+                opacity: 1;
+            }
+
+            .brand {
+                margin-bottom: 20px;
+            }
+
+            .brand-icon {
+                width: 36px;
+                height: 36px;
+                font-size: 16px;
+                border-radius: 10px;
+            }
+
+            .brand-text h1 {
+                font-size: 18px;
+            }
+
+            .brand-text span {
+                font-size: 9px !important;
+            }
+
+            .nav-btn {
+                padding: 14px 16px;
+                font-size: 14px;
+                border-radius: 10px;
+            }
+
+            .nav-btn i {
+                width: 18px;
+                font-size: 14px;
+            }
+
+            .status-badge {
+                padding: 14px;
+                border-radius: 10px;
+            }
+
+            .main-stage {
+                width: 100%;
+            }
+
+            .chat-feed {
+                padding: 72px 12px 16px;
+                gap: 16px;
+            }
+
+            .msg-row {
+                gap: 8px;
+            }
+
+            .avatar {
+                width: 30px;
+                height: 30px;
+                min-width: 30px;
+                font-size: 12px;
+                border-radius: 8px;
             }
 
             .bubble {
-                max-width: 95%;
+                max-width: calc(100% - 45px);
+                padding: 12px 14px;
+                font-size: 14px;
+                line-height: 1.5;
+                border-radius: 14px;
+            }
+
+            .bubble h3 {
+                font-size: 16px !important;
+            }
+
+            .bubble p {
+                font-size: 14px;
+            }
+
+            .bubble kbd {
+                font-size: 10px !important;
+                padding: 1px 4px !important;
+            }
+
+            .prose pre {
+                margin: 10px -6px;
+                border-radius: 8px;
+                font-size: 11px;
+                overflow-x: auto;
+            }
+
+            .prose code {
+                font-size: 0.8em;
+            }
+
+            .code-header {
+                padding: 6px 10px;
+                font-size: 10px;
+            }
+
+            .msg-actions {
+                opacity: 1;
+                margin-top: 8px;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+
+            .msg-action-btn {
+                padding: 6px 10px;
+                font-size: 11px;
+            }
+
+            .input-dock {
+                padding: 8px 10px 16px;
+            }
+
+            .input-wrapper {
+                padding: 6px 6px 6px 14px;
+                border-radius: 18px;
+                gap: 6px;
+            }
+
+            textarea {
+                font-size: 16px;
+                padding: 10px 0;
+                min-height: 20px;
+            }
+
+            textarea::placeholder {
+                font-size: 14px;
+            }
+
+            .send-btn,
+            .voice-btn {
+                width: 42px;
+                height: 42px;
+                min-width: 42px;
+                border-radius: 12px;
+                font-size: 15px;
+            }
+
+            .voice-visualizer {
+                padding: 0 4px;
+            }
+
+            .voice-bar {
+                width: 3px;
+                height: 14px;
             }
 
             .quick-actions {
-                padding: 0 15px 10px;
+                padding: 0 10px 6px;
+                gap: 6px;
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                justify-content: flex-start;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+
+            .quick-actions::-webkit-scrollbar {
+                display: none;
             }
 
             .quick-action-btn {
+                padding: 6px 10px;
+                font-size: 11px;
+                white-space: nowrap;
+                flex-shrink: 0;
+            }
+
+            .quick-action-btn i {
+                font-size: 10px;
+            }
+
+            .loader-overlay {
+                padding: 12px;
+                gap: 12px;
+            }
+
+            .spinner-box {
+                width: 28px;
+                height: 28px;
+            }
+
+            .status-steps {
+                font-size: 10px;
+            }
+
+            /* Modals */
+            .modal-panel {
+                width: 95%;
+                padding: 20px;
+                border-radius: 20px;
+                max-height: 85vh;
+                overflow-y: auto;
+            }
+
+            .modal-head h2 {
+                font-size: 20px;
+            }
+
+            .shortcuts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .shortcut-item {
+                padding: 10px 12px;
+            }
+
+            .key {
+                padding: 3px 8px;
+                font-size: 11px;
+            }
+
+            /* Toast notifications */
+            .toast-container {
+                bottom: 80px;
+                right: 12px;
+                left: 12px;
+            }
+
+            .toast {
+                min-width: unset;
+                width: 100%;
+                padding: 12px 16px;
+            }
+
+            .toast-icon {
+                width: 32px;
+                height: 32px;
+                font-size: 14px;
+            }
+
+            .toast-title {
+                font-size: 13px;
+            }
+
+            .toast-message {
+                font-size: 11px;
+            }
+
+            /* Voice status */
+            .voice-status {
+                font-size: 11px;
                 padding: 6px 12px;
-                font-size: 12px;
+            }
+
+            /* Aurora blobs - reduce for mobile performance */
+            .aurora-blob {
+                filter: blur(60px);
+                opacity: 0.3;
+            }
+        }
+
+        /* Extra small devices (iPhone SE, small Androids) */
+        @media (max-width: 380px) {
+            .mobile-header {
+                height: 54px;
+                padding: 0 8px;
             }
 
             .mobile-menu-btn {
-                display: flex;
+                width: 36px;
+                height: 36px;
             }
+
+            .mobile-brand-icon {
+                width: 28px;
+                height: 28px;
+                font-size: 12px;
+            }
+
+            .mobile-brand-text {
+                font-size: 14px;
+            }
+
+            .mobile-lang-btn {
+                width: 32px;
+                height: 32px;
+                font-size: 14px;
+            }
+
+            .chat-feed {
+                padding: 66px 8px 12px;
+                gap: 12px;
+            }
+
+            .bubble {
+                max-width: calc(100% - 38px);
+                padding: 10px 12px;
+                font-size: 13px;
+            }
+
+            .bubble h3 {
+                font-size: 14px !important;
+            }
+
+            .bubble p {
+                font-size: 13px;
+            }
+
+            .avatar {
+                width: 26px;
+                height: 26px;
+                min-width: 26px;
+                font-size: 10px;
+                border-radius: 6px;
+            }
+
+            .input-dock {
+                padding: 6px 6px 12px;
+            }
+
+            .input-wrapper {
+                padding: 5px 5px 5px 12px;
+                gap: 4px;
+            }
+
+            .send-btn,
+            .voice-btn {
+                width: 38px;
+                height: 38px;
+                min-width: 38px;
+                border-radius: 10px;
+                font-size: 14px;
+            }
+
+            .quick-actions {
+                padding: 0 6px 4px;
+                gap: 4px;
+            }
+
+            .quick-action-btn {
+                padding: 5px 8px;
+                font-size: 10px;
+                gap: 4px;
+            }
+
+            .brand-text h1 {
+                font-size: 15px;
+            }
+
+            .sidebar {
+                width: 90%;
+                max-width: 280px;
+                padding: 16px;
+            }
+
+            .nav-btn {
+                padding: 12px 14px;
+                font-size: 13px;
+            }
+        }
+
+        /* Very small devices (iPhone 5/SE 1st gen) */
+        @media (max-width: 320px) {
+            .mobile-brand-text {
+                display: none;
+            }
+
+            .chat-feed {
+                padding: 60px 6px 10px;
+            }
+
+            .bubble {
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+
+            .avatar {
+                width: 24px;
+                height: 24px;
+                min-width: 24px;
+            }
+
+            .send-btn,
+            .voice-btn {
+                width: 36px;
+                height: 36px;
+                min-width: 36px;
+            }
+        }
+
+        /* Landscape mobile */
+        @media (max-width: 768px) and (orientation: landscape) {
+            .chat-feed {
+                padding: 60px 16px 16px;
+            }
+
+            .input-dock {
+                padding: 8px 16px 12px;
+            }
+
+            .modal-panel {
+                max-height: 90vh;
+            }
+        }
+
+        /* Tablet portrait */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            :root {
+                --sidebar-w: 240px;
+            }
+
+            .sidebar {
+                padding: 20px;
+            }
+
+            .chat-feed {
+                padding: 40px 16px;
+            }
+
+            .bubble {
+                max-width: 80%;
+            }
+
+            .msg-row {
+                max-width: 800px;
+            }
+        }
+
+        /* Safe area for notched devices */
+        @supports (padding: max(0px)) {
+            .input-dock {
+                padding-bottom: max(16px, env(safe-area-inset-bottom));
+            }
+
+            .mobile-header {
+                padding-top: env(safe-area-inset-top);
+                height: calc(60px + env(safe-area-inset-top));
+            }
+
+            @media (max-width: 768px) {
+                .chat-feed {
+                    padding-top: calc(72px + env(safe-area-inset-top));
+                }
+            }
+
+            .sidebar {
+                padding-top: max(20px, env(safe-area-inset-top));
+            }
+        }
+
+        /* Mobile Header Bar */
+        .mobile-header {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: var(--bg-glass-heavy);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-subtle);
+            z-index: 25;
+            padding: 0 12px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .mobile-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .mobile-header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         /* Mobile Menu Button */
         .mobile-menu-btn {
             display: none;
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 25;
-            width: 44px;
-            height: 44px;
-            background: var(--bg-glass-heavy);
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(10px);
             border: 1px solid var(--border-subtle);
-            border-radius: 12px;
+            border-radius: 10px;
             align-items: center;
             justify-content: center;
             cursor: pointer;
             color: var(--text-main);
+            transition: all 0.2s var(--ease-smooth);
+        }
+
+        .mobile-menu-btn:active {
+            transform: scale(0.92);
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .mobile-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .mobile-brand-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--primary-cyan), var(--primary-indigo));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: white;
+        }
+
+        .mobile-brand-text {
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        /* Mobile Language Toggle */
+        .mobile-lang-btn {
+            width: 36px;
+            height: 36px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s var(--ease-smooth);
+        }
+
+        .mobile-lang-btn:active {
+            transform: scale(0.92);
+        }
+
+        /* Mobile Status Indicator */
+        .mobile-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+
+        .mobile-status.online {
+            background: #10b981;
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
         }
 
         /* Keyboard Shortcuts Modal */
@@ -1224,10 +1736,27 @@
         <div class="scanlines"></div>
     </div>
 
-    <!-- Mobile Menu Button -->
-    <button class="mobile-menu-btn" onclick="toggleSidebar()">
-        <i class="fas fa-bars"></i>
-    </button>
+    <!-- Mobile Header Bar -->
+    <header class="mobile-header" id="mobileHeader">
+        <div class="mobile-header-left">
+            <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="Toggle menu">
+                <i class="fas fa-bars" id="menuIcon"></i>
+            </button>
+            <div class="mobile-brand">
+                <div class="mobile-brand-icon"><i class="fas fa-cube"></i></div>
+                <span class="mobile-brand-text">NEXUS AI</span>
+            </div>
+        </div>
+        <div class="mobile-header-right">
+            <button class="mobile-lang-btn" id="mobileLangBtn" onclick="cycleVoiceLanguage()" title="Toggle Language">
+                <span id="mobileLangIndicator">🌐</span>
+            </button>
+            <div class="mobile-status" id="mobileStatusDot"></div>
+        </div>
+    </header>
+
+    <!-- Sidebar Overlay for Mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
@@ -1244,14 +1773,15 @@
         </div>
 
         <nav>
-            <button class="nav-btn active"><i class="fas fa-plus"></i> New Session</button>
-            <button class="nav-btn" onclick="openModal('indexModal')"><i class="fas fa-database"></i> Knowledge
-                Base</button>
-            <button class="nav-btn" onclick="openModal('configModal')"><i class="fas fa-sliders-h"></i> System
+            <button class="nav-btn active" onclick="handleNavClick()"><i class="fas fa-plus"></i> New Session</button>
+            <button class="nav-btn" onclick="handleNavClick(() => openModal('configModal'))"><i
+                    class="fas fa-sliders-h"></i> System
                 Config</button>
-            <button class="nav-btn" onclick="openModal('shortcutsModal')"><i class="fas fa-keyboard"></i>
+            <button class="nav-btn" onclick="handleNavClick(() => openModal('shortcutsModal'))"><i
+                    class="fas fa-keyboard"></i>
                 Shortcuts</button>
-            <button class="nav-btn" onclick="clearHistory()"><i class="fas fa-trash-alt"></i> Clear History</button>
+            <button class="nav-btn" onclick="handleNavClick(clearHistory)"><i class="fas fa-trash-alt"></i> Clear
+                History</button>
         </nav>
 
         <div class="status-badge">
@@ -1346,20 +1876,6 @@
             </div>
         </div>
     </main>
-
-    <div class="modal-mask" id="indexModal">
-        <div class="modal-panel">
-            <div class="modal-head">
-                <h2>Knowledge Base Stats</h2>
-                <button class="close-btn" onclick="closeModal('indexModal')"><i class="fas fa-times"></i></button>
-            </div>
-            <div id="statsContent">
-                <div style="text-align: center; padding: 40px; color: var(--text-muted);">
-                    <i class="fas fa-circle-notch fa-spin"></i> Syncing...
-                </div>
-            </div>
-        </div>
-    </div>
 
     <div class="modal-mask" id="configModal">
         <div class="modal-panel">
@@ -1499,7 +2015,6 @@
             document.addEventListener('keydown', handleKeyboardShortcuts);
 
             // Initial Animation
-            fetchStats();
             connectSocket();
         }
 
@@ -1628,13 +2143,21 @@
 
         function updateLangIndicator(lang) {
             const indicator = document.getElementById('langIndicator');
+            const mobileIndicator = document.getElementById('mobileLangIndicator');
             const flags = {
                 'en-US': '🇺🇸',
                 'he-IL': '🇮🇱',
                 'auto': '🌐'
             };
-            indicator.textContent = flags[lang] || '🌐';
-            indicator.title = `Current: ${getLangDisplayName(lang)}`;
+            const flag = flags[lang] || '🌐';
+
+            if (indicator) {
+                indicator.textContent = flag;
+                indicator.title = `Current: ${getLangDisplayName(lang)}`;
+            }
+            if (mobileIndicator) {
+                mobileIndicator.textContent = flag;
+            }
         }
 
         function toggleVoiceRecording() {
@@ -1760,7 +2283,37 @@
 
         // --- Sidebar Toggle ---
         function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('active');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const menuIcon = document.getElementById('menuIcon');
+
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+
+            // Toggle icon
+            if (sidebar.classList.contains('active')) {
+                menuIcon.className = 'fas fa-times';
+            } else {
+                menuIcon.className = 'fas fa-bars';
+            }
+        }
+
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const menuIcon = document.getElementById('menuIcon');
+
+            sidebar.classList.remove('active');
+            overlay.classList.remove('active');
+            menuIcon.className = 'fas fa-bars';
+        }
+
+        // Close sidebar when clicking nav buttons on mobile
+        function handleNavClick(callback) {
+            if (window.innerWidth <= 768) {
+                closeSidebar();
+            }
+            if (callback) callback();
         }
 
         function connectSocket() {
@@ -1918,16 +2471,19 @@
 
         function updateStatus(online) {
             const dot = document.getElementById('statusDot');
+            const mobileDot = document.getElementById('mobileStatusDot');
             const txt = document.getElementById('statusText');
             const btn = document.getElementById('sendBtn');
 
             if (online) {
                 dot.className = 'pulse-dot online';
+                if (mobileDot) mobileDot.className = 'mobile-status online';
                 txt.innerText = 'System Online';
                 txt.style.color = '#10b981';
                 btn.disabled = false;
             } else {
                 dot.className = 'pulse-dot';
+                if (mobileDot) mobileDot.className = 'mobile-status';
                 txt.innerText = 'Reconnecting...';
                 txt.style.color = '#ef4444';
                 btn.disabled = true;
@@ -1948,7 +2504,6 @@
         /* --- Modals --- */
         function openModal(id) {
             document.getElementById(id).classList.add('active');
-            if (id === 'indexModal') fetchStats();
         }
         function closeModal(id) {document.getElementById(id).classList.remove('active');}
 
@@ -1962,31 +2517,6 @@
         function clearHistory() {
             socket.emit('session:clear');
             showToast('History Cleared', 'Chat history has been cleared', 'success');
-        }
-
-        async function fetchStats() {
-            try {
-                const res = await fetch('/rag/index/stats');
-                const data = await res.json();
-                if (data.success) {
-                    document.getElementById('statsContent').innerHTML = `
-                        <div class="stat-grid">
-                            <div class="stat-box">
-                                <div class="stat-val">${data.data.totalVectors.toLocaleString()}</div>
-                                <div class="stat-lbl">Vectors</div>
-                            </div>
-                            <div class="stat-box">
-                                <div class="stat-val">${data.data.dimension}</div>
-                                <div class="stat-lbl">Dimensions</div>
-                            </div>
-                            <div class="stat-box">
-                                <div class="stat-val">${(data.data.indexFullness * 100).toFixed(1)}%</div>
-                                <div class="stat-lbl">Capacity</div>
-                            </div>
-                        </div>
-                    `;
-                }
-            } catch (e) {console.log('Stats currently unavailable in demo mode');}
         }
     </script>
 </body>
