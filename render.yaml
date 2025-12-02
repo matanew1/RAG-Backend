@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: rag-backend
+    runtime: node
+    buildCommand: pnpm install && pnpm build
+    startCommand: pnpm start:prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        fromSecret: PORT
+      - key: GROQ_API_KEY
+        fromSecret: GROQ_API_KEY
+      - key: GROQ_MODEL
+        fromSecret: GROQ_MODEL
+      - key: PINECONE_API_KEY
+        fromSecret: PINECONE_API_KEY
+      - key: PINECONE_ENVIRONMENT
+        fromSecret: PINECONE_ENVIRONMENT
+      - key: PINECONE_INDEX_NAME
+        fromSecret: PINECONE_INDEX_NAME
+      - key: RAG_DEFAULT_INSTRUCTIONS
+        fromSecret: RAG_DEFAULT_INSTRUCTIONS
+      - key: RAG_MAX_HISTORY_LENGTH
+        fromSecret: RAG_MAX_HISTORY_LENGTH
+      - key: RAG_TEMPERATURE
+        fromSecret: RAG_TEMPERATURE
+      - key: RAG_MAX_TOKENS
+        fromSecret: RAG_MAX_TOKENS
+      - key: RAG_TOP_K
+        fromSecret: RAG_TOP_K

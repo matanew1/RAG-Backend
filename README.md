@@ -366,6 +366,59 @@ This project is licensed under the UNLICENSED license.
    - Clear node_modules: `rm -rf node_modules && npm install`
    - Check TypeScript compilation: `npm run build`
 
+## 🚀 Deployment
+
+### Render Deployment
+
+1. **Connect to Render:**
+   - Go to [Render Dashboard](https://dashboard.render.com)
+   - Click "New" → "Web Service"
+   - Connect your GitHub repository
+
+2. **Configure Build Settings:**
+   - **Runtime**: Node
+   - **Build Command**: `pnpm install && pnpm build`
+   - **Start Command**: `pnpm start:prod`
+
+3. **Environment Variables:**
+   Set these as environment secrets in Render:
+   ```
+   NODE_ENV=production
+   PORT=10000
+   GROQ_API_KEY=your_groq_api_key
+   GROQ_MODEL=meta-llama/llama-4-scout-17b-16e-instruct
+   PINECONE_API_KEY=your_pinecone_api_key
+   PINECONE_ENVIRONMENT=us-west1-gcp
+   PINECONE_INDEX_NAME=rag-chatbot
+   RAG_DEFAULT_INSTRUCTIONS=You are a helpful AI assistant.
+   RAG_MAX_HISTORY_LENGTH=10
+   RAG_TEMPERATURE=0.7
+   RAG_MAX_TOKENS=1024
+   RAG_TOP_K=5
+   ```
+
+4. **Deploy:**
+   - Click "Create Web Service"
+   - Wait for deployment to complete
+   - Your app will be available at: `https://your-service-name.onrender.com`
+
+5. **Access Your App:**
+   - **Frontend**: `https://your-service-name.onrender.com/` (serves `index.html`)
+   - **API Docs**: `https://your-service-name.onrender.com/api`
+   - **WebSocket**: `wss://your-service-name.onrender.com/chat`
+
+### Alternative Deployment Options
+
+#### Docker Deployment
+```bash
+# Build and run with Docker
+docker build -t rag-backend .
+docker run -p 3001:3001 --env-file .env rag-backend
+```
+
+#### Railway, Fly.io, or Vercel
+Similar configuration to Render - use the same build/start commands and environment variables.
+
 ### Getting Help
 
 - Check the [Issues](https://github.com/your-repo/issues) page

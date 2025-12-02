@@ -62,7 +62,7 @@ async function bootstrap() {
   console.log(`WebSocket available at ws://localhost:${port}/chat`);
 
   // Auto-open the chat interface in browser (only in development)
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production' && !process.env.RENDER) {
     const chatUrl = `http://localhost:${port}`;
     openBrowser(chatUrl);
   }

@@ -7,6 +7,7 @@ import { PineconeModule } from './modules/pinecone/pinecone.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import ragConfig from './config/rag.config';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -14,15 +15,20 @@ import ragConfig from './config/rag.config';
       isGlobal: true,
       load: [ragConfig],
     }),
-    // Serve static files from root directory
+    // Serve static files from dist directory (for production)
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..', '..'),
+      rootPath: join(__dirname, '..'),
       serveRoot: '/',
+      serveStaticOptions: {
+        index: 'index.html',
+        fallthrough: true, // Allow API routes to work
+      },
     }),
     RagModule,
     VectordbModule,
     LlmModule,
     PineconeModule,
   ],
+  controllers: [AppController],
 })
 export class AppModule {}
