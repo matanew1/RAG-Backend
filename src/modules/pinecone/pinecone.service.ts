@@ -129,19 +129,6 @@ export class PineconeService {
   }
 
   /**
-   * Delete the index (use with caution!)
-   */
-  async deleteIndex(): Promise<void> {
-    try {
-      await this.pinecone.deleteIndex(this.indexName);
-      this.logger.log(`🗑️ Index "${this.indexName}" deleted successfully`);
-    } catch (error) {
-      this.logger.error('❌ Failed to delete index:', error);
-      throw error;
-    }
-  }
-
-  /**
    * Get the Pinecone client instance (for advanced operations)
    */
   getClient(): Pinecone {

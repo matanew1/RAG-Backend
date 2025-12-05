@@ -105,32 +105,6 @@ export class VectorDbService {
   }
 
   /**
-   * Delete a document
-   */
-  async deleteDocument(id: string): Promise<void> {
-    try {
-      await this.index.deleteOne(id);
-      this.logger.log(`🗑️  Document deleted: ${id}`);
-    } catch (error) {
-      this.logger.error('Delete failed:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Clear all documents (use with caution!)
-   */
-  async clearAll(): Promise<void> {
-    try {
-      await this.index.deleteAll();
-      this.logger.warn('⚠️  All documents cleared');
-    } catch (error) {
-      this.logger.error('Clear all failed:', error);
-      throw error;
-    }
-  }
-
-  /**
    * Get index statistics
    */
   async getIndexStats(): Promise<any> {

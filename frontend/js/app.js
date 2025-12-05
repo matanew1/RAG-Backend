@@ -254,25 +254,25 @@ class App {
    */
   async openStats() {
     try {
-      const [stats, info] = await Promise.all([api.getIndexStats(), api.getIndexInfo()]);
+      const { data } = await api.getIndex();
 
       const content = document.createElement('div');
       content.innerHTML = `
         <div class="stats-grid">
           <div class="stat-card">
-            <div class="stat-value">${stats.vectorCount || stats.totalVectors || 0}</div>
+            <div class="stat-value">${data.totalVectors || 0}</div>
             <div class="stat-label">Total Vectors</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">${info.dimension || 384}</div>
+            <div class="stat-value">${data.dimension || 384}</div>
             <div class="stat-label">Dimensions</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">${info.metric || 'cosine'}</div>
+            <div class="stat-value">${data.metric || 'cosine'}</div>
             <div class="stat-label">Similarity Metric</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">${stats.namespaces?.['']?.vectorCount || stats.vectorCount || 0}</div>
+            <div class="stat-value">${data.namespaces?.['']?.vectorCount || data.totalVectors || 0}</div>
             <div class="stat-label">Default Namespace</div>
           </div>
         </div>

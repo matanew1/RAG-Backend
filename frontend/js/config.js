@@ -12,8 +12,7 @@ export const Config = Object.freeze({
     TRAIN_ENDPOINT: '/train',
     TRAIN_BATCH_ENDPOINT: '/train/batch',
     CHAT_ENDPOINT: '/chat',
-    INDEX_STATS: '/index/stats',
-    INDEX_INFO: '/index/info',
+    INDEX: '/index',
     INDEX_DOCS: '/index/documents',
   },
 

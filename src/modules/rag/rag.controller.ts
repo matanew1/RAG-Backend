@@ -300,179 +300,40 @@ export class RagController {
   }
 
   /**
-   * GET /rag/websocket-info - WebSocket connection information
+   * GET /rag/index - Get Pinecone index info and statistics (consolidated)
    */
-  @Get('websocket-info')
-  @ApiOperation({
-    summary: 'Get WebSocket connection information',
-    tags: ['websocket'],
-  })
+  @Get('index')
+  @ApiOperation({ summary: 'Get Pinecone index info and statistics' })
   @ApiResponse({
     status: 200,
-    description: 'WebSocket connection details and available events',
+    description: 'Index info and statistics retrieved successfully',
     schema: {
       type: 'object',
       properties: {
-        websocketUrl: { type: 'string', example: 'ws://localhost:3001/chat' },
-        namespace: { type: 'string', example: '/chat' },
-        events: {
+        success: { type: 'boolean', example: true },
+        data: {
           type: 'object',
           properties: {
-            incoming: {
-              type: 'array',
-              items: { type: 'string' },
-              example: [
-                'chat:message',
-                'config:update',
-                'session:clear',
-                'session:info',
-                'admin:broadcast',
-              ],
-            },
-            outgoing: {
-              type: 'array',
-              items: { type: 'string' },
-              example: [
-                'session:created',
-                'chat:start',
-                'chat:chunk',
-                'chat:end',
-                'chat:response',
-                'chat:error',
-                'config:updated',
-                'session:cleared',
-                'session:info',
-                'broadcast',
-                'error',
-              ],
-            },
-          },
-        },
-        examples: {
-          type: 'object',
-          properties: {
-            connect: { type: 'string', example: 'Connect to ws://localhost:3001/chat' },
-            sendMessage: {
-              type: 'object',
-              properties: {
-                event: { type: 'string', example: 'chat:message' },
-                data: {
-                  type: 'object',
-                  properties: {
-                    message: { type: 'string', example: 'Hello, how can you help me?' },
-                    streaming: { type: 'boolean', example: true },
-                  },
-                },
-              },
-            },
-            updateConfig: {
-              type: 'object',
-              properties: {
-                event: { type: 'string', example: 'config:update' },
-                data: {
-                  type: 'object',
-                  properties: {
-                    instructions: { type: 'string', example: 'You are a helpful assistant.' },
-                  },
-                },
-              },
-            },
+            name: { type: 'string', example: 'rag-index' },
+            dimension: { type: 'number', example: 384 },
+            metric: { type: 'string', example: 'cosine' },
+            host: { type: 'string' },
+            status: { type: 'string', example: 'Ready' },
+            totalVectors: { type: 'number', example: 150 },
+            indexFullness: { type: 'number', example: 0.1 },
           },
         },
       },
     },
   })
-  getWebSocketInfo() {
-    return {
-      websocketUrl: 'ws://localhost:3001/chat',
-      namespace: '/chat',
-      events: {
-        incoming: [
-          'chat:message',
-          'config:update',
-          'session:clear',
-          'session:info',
-          'admin:broadcast',
-        ],
-        outgoing: [
-          'session:created',
-          'chat:start',
-          'chat:chunk',
-          'chat:end',
-          'chat:response',
-          'chat:error',
-          'config:updated',
-          'session:cleared',
-          'session:info',
-          'broadcast',
-          'error',
-        ],
-      },
-      examples: {
-        connect: 'Connect to ws://localhost:3001/chat',
-        sendMessage: {
-          event: 'chat:message',
-          data: { message: 'Hello, how can you help me?', streaming: true },
-        },
-        updateConfig: {
-          event: 'config:update',
-          data: { instructions: 'You are a helpful assistant.' },
-        },
-      },
-    };
-  }
-
-  /**
-   * GET /rag/index/stats - Get Pinecone index statistics
-   */
-  @Get('index/stats')
-  @ApiOperation({ summary: 'Get Pinecone index statistics' })
-  @ApiResponse({
-    status: 200,
-    description: 'Index statistics retrieved successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        totalVectors: { type: 'number', example: 150 },
-        dimension: { type: 'number', example: 1536 },
-        indexFullness: { type: 'number', example: 0.1 },
-        namespaces: { type: 'object' },
-      },
-    },
-  })
-  async getIndexStats() {
-    const stats = await this.vectorDbService.getIndexStats();
+  async getIndex() {
+    const [info, stats] = await Promise.all([
+      this.vectorDbService.getIndexInfo(),
+      this.vectorDbService.getIndexStats(),
+    ]);
     return {
       success: true,
-      data: stats,
-    };
-  }
-
-  /**
-   * GET /rag/index/info - Get Pinecone index information
-   */
-  @Get('index/info')
-  @ApiOperation({ summary: 'Get Pinecone index information' })
-  @ApiResponse({
-    status: 200,
-    description: 'Index information retrieved successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        name: { type: 'string', example: 'rag-index' },
-        dimension: { type: 'number', example: 1536 },
-        metric: { type: 'string', example: 'cosine' },
-        host: { type: 'string' },
-        status: { type: 'string', example: 'Ready' },
-        createdAt: { type: 'string', format: 'date-time' },
-      },
-    },
-  })
-  async getIndexInfo() {
-    const info = await this.vectorDbService.getIndexInfo();
-    return {
-      success: true,
-      data: info,
+      data: { ...info, ...stats },
     };
   }
 

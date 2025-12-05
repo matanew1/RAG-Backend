@@ -128,25 +128,6 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async keys(pattern: string): Promise<string[]> {
-    try {
-      return await this.client.keys(pattern);
-    } catch (error) {
-      this.logger.error(`Failed to get keys for pattern ${pattern}:`, error);
-      return [];
-    }
-  }
-
-  async exists(key: string): Promise<boolean> {
-    try {
-      const result = await this.client.exists(key);
-      return result === 1;
-    } catch (error) {
-      this.logger.error(`Failed to check existence of key ${key}:`, error);
-      return false;
-    }
-  }
-
   async onModuleDestroy() {
     await this.client.quit();
     this.logger.log('Redis connection closed');

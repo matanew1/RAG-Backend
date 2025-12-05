@@ -178,17 +178,4 @@ export class RagGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     client.emit('session:info', info);
   }
-
-  /**
-   * Broadcast message to all clients (admin feature)
-   */
-  @SubscribeMessage('admin:broadcast')
-  handleBroadcast(@ConnectedSocket() client: Socket, @MessageBody() data: { message: string }) {
-    this.server.emit('broadcast', {
-      message: data.message,
-      timestamp: new Date().toISOString(),
-    });
-
-    this.logger.log(`📢 Broadcast from ${client.id}: ${data.message}`);
-  }
 }

@@ -8,8 +8,6 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { exec } from 'child_process';
-import { platform } from 'os';
 import { Logger } from '@nestjs/common';
 
 async function bootstrap() {
@@ -49,11 +47,10 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('RAG Backend API')
     .setDescription(
-      'API documentation for the RAG Backend with NestJS\n\n## WebSocket Endpoints\n\nConnect to `ws://localhost:3001/chat` for real-time chat functionality.\n\n### Available WebSocket Events:\n\n**Outgoing Events (Server → Client):**\n- `session:created` - Session created on connection\n- `chat:start` - Chat response started (streaming)\n- `chat:chunk` - Chat response chunk (streaming)\n- `chat:end` - Chat response completed (streaming)\n- `chat:response` - Chat response (non-streaming)\n- `chat:error` - Chat error occurred\n- `config:updated` - Configuration updated\n- `session:cleared` - Session history cleared\n- `session:info` - Session information\n- `broadcast` - Broadcast message\n- `error` - General error\n\n**Incoming Events (Client → Server):**\n- `chat:message` - Send chat message\n- `config:update` - Update instructions\n- `session:clear` - Clear session history\n- `session:info` - Request session info\n- `admin:broadcast` - Broadcast to all clients',
+      'API documentation for the RAG Backend with NestJS\n\n## WebSocket Endpoints\n\nConnect to `ws://localhost:3001/chat` for real-time chat functionality.\n\n### Available WebSocket Events:\n\n**Outgoing Events (Server → Client):**\n- `session:created` - Session created on connection\n- `chat:start` - Chat response started (streaming)\n- `chat:chunk` - Chat response chunk (streaming)\n- `chat:end` - Chat response completed (streaming)\n- `chat:response` - Chat response (non-streaming)\n- `chat:error` - Chat error occurred\n- `config:updated` - Configuration updated\n- `session:cleared` - Session history cleared\n- `session:info` - Session information\n- `error` - General error\n\n**Incoming Events (Client → Server):**\n- `chat:message` - Send chat message\n- `config:update` - Update instructions\n- `session:clear` - Clear session history\n- `session:info` - Request session info',
     )
     .setVersion('1.0')
     .addTag('rag', 'RAG operations')
-    .addTag('websocket', 'WebSocket operations')
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);

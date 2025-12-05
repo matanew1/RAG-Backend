@@ -118,19 +118,6 @@ export class ElasticsearchService implements OnModuleInit {
     }
   }
 
-  async deleteDocument(id: string): Promise<void> {
-    try {
-      await this.client.delete({
-        index: this.indexName,
-        id,
-      });
-      this.logger.log(`Deleted document: ${id}`);
-    } catch (error) {
-      this.logger.error(`Failed to delete document ${id}:`, error);
-      throw error;
-    }
-  }
-
   async bulkIndex(
     documents: Array<{ id: string; content: string; metadata?: any }>,
   ): Promise<void> {

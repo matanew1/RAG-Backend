@@ -118,17 +118,10 @@ class ApiService {
   }
 
   /**
-   * Get index stats
+   * Get index info and stats
    */
-  getIndexStats() {
-    return this.get(Config.API.INDEX_STATS);
-  }
-
-  /**
-   * Get index info
-   */
-  getIndexInfo() {
-    return this.get(Config.API.INDEX_INFO);
+  getIndex() {
+    return this.get(Config.API.INDEX);
   }
 
   /**

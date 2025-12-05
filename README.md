@@ -243,7 +243,8 @@ Once the application is running, visit:
 - `DELETE /rag/session/:id` - Delete session
 - `POST /rag/session/:id/clear` - Clear session history
 - `POST /rag/chat` - Send chat message (HTTP)
-- `GET /rag/websocket-info` - Get WebSocket connection info
+- `GET /rag/index` - Get Pinecone index info and statistics
+- `GET /rag/index/documents` - List indexed documents
 
 ## 🌐 WebSocket Integration
 
@@ -265,7 +266,6 @@ Connect to the WebSocket server at: `ws://localhost:3001/chat`
 | `config:update` | `{ instructions: string }` | Update RAG instructions |
 | `session:clear` | `{ sessionId: string }` | Clear session history |
 | `session:info` | `{ sessionId: string }` | Request session information |
-| `admin:broadcast` | `{ message: string }` | Broadcast message to all clients |
 
 #### Outgoing Events (Server → Client)
 
@@ -280,7 +280,6 @@ Connect to the WebSocket server at: `ws://localhost:3001/chat`
 | `config:updated` | `{ instructions: string }` | Configuration updated |
 | `session:cleared` | `{ sessionId: string }` | Session history cleared |
 | `session:info` | `{ session: object }` | Session information |
-| `broadcast` | `{ message: string }` | Broadcast message |
 | `error` | `{ error: string }` | General error |
 
 ## 🧪 Testing

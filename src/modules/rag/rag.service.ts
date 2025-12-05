@@ -30,7 +30,6 @@ export class RagService {
     { response: string; context: string[]; timestamp: number }
   >();
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-  private readonly MAX_SESSIONS = 1000; // Limit concurrent sessions
   private hasDataCache: { hasData: boolean; timestamp: number } | null = null;
   private readonly HAS_DATA_CACHE_TTL = 30 * 1000; // 30 seconds
 
@@ -182,22 +181,6 @@ export class RagService {
   }
 
   /**
-   * Cleanup oldest sessions when limit is reached
-   */
-  private cleanupOldSessions(): void {
-    const sessions = Array.from(this.sessions.entries());
-    sessions.sort((a, b) => a[1].lastActivity.getTime() - b[1].lastActivity.getTime());
-
-    // Remove oldest 20% of sessions
-    const toRemove = Math.floor(this.MAX_SESSIONS * 0.2);
-    for (let i = 0; i < toRemove; i++) {
-      this.sessions.delete(sessions[i][0]);
-    }
-
-    this.logger.log(`🧹 Cleaned up ${toRemove} old sessions`);
-  }
-
-  /**
    * Get or create session (Redis-backed with local cache)
    */
   private async getOrCreateSession(sessionId?: string): Promise<ChatSession> {
@@ -260,7 +243,7 @@ export class RagService {
         // 2. Hybrid retrieval: Parallel search in Pinecone + Elasticsearch
         const [vectorDocs, elasticsearchDocs] = await Promise.all([
           this.parallelMultiQueryRetrieval(queryVariations),
-          this.elasticsearchService.search(message, this.configService.get<number>('rag.topK')!),
+          this.elasticsearchService.search(message, this.configService.get<number>('rag.topK')),
         ]);
 
         // 3. Merge results from both sources (convert Elasticsearch results to VectorSearchResult format)
@@ -639,7 +622,7 @@ Return only the queries, one per line, no numbering or extra text.`;
 
     return Array.from(uniqueDocs.values())
       .sort((a, b) => (b.score || 0) - (a.score || 0))
-      .slice(0, this.configService.get<number>('rag.topK')!);
+      .slice(0, this.configService.get<number>('rag.topK'));
   }
 
   /**
@@ -715,19 +698,6 @@ Return only the queries, one per line, no numbering or extra text.`;
   }
 
   /**
-   * Search with metadata filtering
-   */
-  async searchWithFilter(
-    query: string,
-    filter?: Record<string, any>,
-    topK?: number,
-  ): Promise<VectorSearchResult[]> {
-    const embedding = await this.llmService.generateEmbedding(query);
-    const k = topK || this.configService.get<number>('rag.topK')!;
-    return this.vectorDbService.search(embedding, k, filter);
-  }
-
-  /**
    * Cleanup old cache entries and manage memory
    */
   private cleanupCache(): void {
@@ -767,17 +737,5 @@ Return only the queries, one per line, no numbering or extra text.`;
       entries.sort((a, b) => b[1].timestamp - a[1].timestamp);
       this.responseCache = new Map(entries.slice(0, 500));
     }
-  }
-
-  /**
-   * Get performance metrics
-   */
-  getPerformanceMetrics() {
-    return {
-      activeSessions: this.sessions.size,
-      queryCacheSize: this.queryCache.size,
-      responseCacheSize: this.responseCache.size,
-      totalSessionsCreated: this.sessions.size, // Could track this separately
-    };
   }
 }

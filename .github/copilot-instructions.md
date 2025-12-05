@@ -153,7 +153,7 @@ pnpm test:e2e    # End-to-end tests with WebSocket
 - **ConfigService injection**: `RedisService` uses ConfigService for config (not direct `process.env`)
 - **Lifecycle management**: Implements `OnModuleDestroy` for graceful shutdown
 - **Retry strategy**: Automatic reconnection with exponential backoff
-- **Operations**: `set`, `get`, `del`, `keys`, `exists` with error handling
+- **Operations**: `set`, `get`, `del` with error handling
 - **Logging**: Comprehensive logging for connection status and errors
 
 ### Elasticsearch Integration
