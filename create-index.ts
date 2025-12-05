@@ -14,10 +14,11 @@ export async function createIndex() {
 
     console.log(`Creating Pinecone index: ${indexName}`);
 
-    // Create index with 1536 dimensions (matching the embedding size)
+    // Create index with 384 dimensions (matching sentence-transformers/all-MiniLM-L6-v2 embedding size)
+    const dimension = parseInt(process.env.EMBEDDING_DIMENSION || '384', 10);
     await pinecone.createIndex({
       name: indexName,
-      dimension: 1536,
+      dimension: dimension,
       metric: 'cosine',
       spec: {
         serverless: {
@@ -55,4 +56,3 @@ export async function createIndex() {
     console.error('❌ Error creating index:', error);
   }
 }
-

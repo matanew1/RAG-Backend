@@ -4,31 +4,40 @@ import { RagModule } from './modules/rag/rag.module';
 import { VectordbModule } from './modules/vectordb/vectordb.module';
 import { LlmModule } from './modules/llm/llm.module';
 import { PineconeModule } from './modules/pinecone/pinecone.module';
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
+import { RedisModule } from './modules/redis/redis.module';
+import { ElasticsearchModule } from './modules/elasticsearch/elasticsearch.module';
+import { DatabaseModule } from './modules/database/database.module';
 import ragConfig from './config/rag.config';
-import { AppController } from './app.controller';
+import { validate } from './config/env.validation';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 60 seconds
+        limit: 10, // 10 requests per 60 seconds
+      },
+    ]),
     ConfigModule.forRoot({
       isGlobal: true,
       load: [ragConfig],
+      validate,
     }),
-    // Serve static files from dist directory (for production)
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, '..'),
-      serveRoot: '/',
-      serveStaticOptions: {
-        index: 'index.html',
-        fallthrough: true, // Allow API routes to work
-      },
-    }),
+    DatabaseModule,
     RagModule,
     VectordbModule,
     LlmModule,
     PineconeModule,
+    RedisModule,
+    ElasticsearchModule,
   ],
-  controllers: [AppController],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

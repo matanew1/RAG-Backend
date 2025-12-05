@@ -1,30 +1,34 @@
+// Polyfill crypto for Node 18 compatibility with TypeORM
+import { webcrypto } from 'crypto';
+if (!globalThis.crypto) {
+  globalThis.crypto = webcrypto as any;
+}
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { exec } from 'child_process';
 import { platform } from 'os';
-
-function openBrowser(url: string) {
-  const command =
-    platform() === 'win32'
-      ? `start ${url}`
-      : platform() === 'darwin'
-        ? `open ${url}`
-        : `xdg-open ${url}`;
-
-  exec(command, (error) => {
-    if (error) {
-      console.log(`❌ Could not open browser automatically: ${error.message}`);
-      console.log(`📱 Please manually open: ${url}`);
-    } else {
-      console.log(`🌐 Browser opened automatically: ${url}`);
-    }
-  });
-}
+import { Logger } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const logger = new Logger('HTTP');
+
+  // Request logging middleware
+  app.use((req, res, next) => {
+    const { method, originalUrl } = req;
+    const start = Date.now();
+
+    res.on('finish', () => {
+      const { statusCode } = res;
+      const duration = Date.now() - start;
+      logger.log(`${method} ${originalUrl} ${statusCode} - ${duration}ms`);
+    });
+
+    next();
+  });
 
   // Enable CORS for WebSocket
   app.enableCors({
@@ -60,11 +64,5 @@ async function bootstrap() {
   console.log(`RAG Backend running on http://localhost:${port}`);
   console.log(`Swagger API docs available at http://localhost:${port}/api`);
   console.log(`WebSocket available at ws://localhost:${port}/chat`);
-
-  // Auto-open the chat interface in browser (only in development)
-  if (process.env.NODE_ENV !== 'production') {
-    const chatUrl = `http://localhost:${port}`;
-    openBrowser(chatUrl);
-  }
 }
 bootstrap();

@@ -8,35 +8,72 @@ export class LlmService {
   private readonly logger = new Logger(LlmService.name);
   private groq: Groq;
 
+  // Cache config values to avoid repeated lookups
+  private readonly model: string;
+  private readonly embeddingModel: string;
+  private readonly maxTokens: number;
+  private readonly hfApiKey: string;
+
   constructor(private configService: ConfigService) {
     const groqApiKey = this.configService.get<string>('llm.groq.apiKey');
     this.groq = new Groq({
-      apiKey: groqApiKey!,
+      apiKey: groqApiKey,
     });
+
+    // Pre-cache config values
+    this.model = this.configService.get<string>('llm.groq.model') || 'llama-3.3-70b-versatile';
+    this.embeddingModel =
+      this.configService.get<string>('llm.huggingface.embeddingModel') ||
+      'sentence-transformers/all-MiniLM-L6-v2';
+    this.maxTokens = this.configService.get<number>('rag.maxTokens') || 1024;
+    this.hfApiKey = this.configService.get<string>('llm.huggingface.apiKey') || '';
+
+    this.logger.log(`✅ LLM Service initialized with Groq (${this.model})`);
   }
 
   /**
-   * Generate embeddings for text using improved hash-based approach
+   * Generate embeddings using Hugging Face Inference API (free)
+   * Using all-MiniLM-L6-v2 which outputs 384-dimensional vectors
    */
   async generateEmbedding(text: string): Promise<number[]> {
-    // Improved hash-based embeddings with better semantic capture
-    const embedding = new Array(1536).fill(0);
+    try {
+      const response = await fetch(
+        `https://api-inference.huggingface.co/pipeline/feature-extraction/${this.embeddingModel}`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${this.hfApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            inputs: text,
+            options: { wait_for_model: true },
+          }),
+        },
+      );
 
-    // Process text with better tokenization
-    const tokens = this.tokenize(text);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Hugging Face API error: ${response.status} - ${errorText}`);
+      }
 
-    tokens.forEach((token, idx) => {
-      const hash = this.improvedHash(token);
-      const position = Math.abs(hash) % 1536;
+      const embedding = await response.json();
 
-      // Add positional encoding for better semantic understanding
-      const positionWeight = Math.sin(idx / 100); // Simple positional encoding
-      embedding[position] += (1 + positionWeight) * this.getTokenWeight(token);
-    });
+      // The API returns the embedding directly as an array
+      if (Array.isArray(embedding) && typeof embedding[0] === 'number') {
+        return embedding;
+      }
 
-    // Normalize the embedding
-    const norm = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
-    return embedding.map((val) => val / (norm || 1));
+      // Sometimes it's nested
+      if (Array.isArray(embedding) && Array.isArray(embedding[0])) {
+        return embedding[0];
+      }
+
+      throw new Error('Unexpected embedding format from Hugging Face API');
+    } catch (error) {
+      this.logger.error('Embedding generation failed:', error);
+      throw error;
+    }
   }
 
   /**
@@ -48,15 +85,25 @@ export class LlmService {
     temperature: number = 0.7,
   ): Promise<string> {
     try {
-      const allMessages = systemPrompt
-        ? [{ role: 'system', content: systemPrompt }, ...messages]
-        : messages;
+      // Build messages array for Groq
+      const groqMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [];
+
+      // Add system prompt if provided
+      if (systemPrompt) {
+        groqMessages.push({ role: 'system', content: systemPrompt });
+      }
+
+      // Add chat history
+      for (const msg of messages) {
+        const role = msg.role.toLowerCase() === 'user' ? 'user' : 'assistant';
+        groqMessages.push({ role, content: msg.content });
+      }
 
       const response = await this.groq.chat.completions.create({
-        model: this.configService.get<string>('llm.groq.model')!,
-        messages: allMessages as any,
-        max_tokens: this.configService.get<number>('rag.maxTokens')!,
+        model: this.model,
+        messages: groqMessages,
         temperature,
+        max_tokens: this.maxTokens,
       });
 
       return response.choices[0]?.message?.content || '';
@@ -67,7 +114,7 @@ export class LlmService {
   }
 
   /**
-   * Generate streaming response
+   * Generate streaming response using Groq
    */
   async *generateStreamingResponse(
     messages: Array<{ role: string; content: string }>,
@@ -75,15 +122,25 @@ export class LlmService {
     temperature: number = 0.7,
   ): AsyncGenerator<string> {
     try {
-      const allMessages = systemPrompt
-        ? [{ role: 'system', content: systemPrompt }, ...messages]
-        : messages;
+      // Build messages array for Groq
+      const groqMessages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [];
+
+      // Add system prompt if provided
+      if (systemPrompt) {
+        groqMessages.push({ role: 'system', content: systemPrompt });
+      }
+
+      // Add chat history
+      for (const msg of messages) {
+        const role = msg.role.toLowerCase() === 'user' ? 'user' : 'assistant';
+        groqMessages.push({ role, content: msg.content });
+      }
 
       const stream = await this.groq.chat.completions.create({
-        model: this.configService.get<string>('llm.groq.model')!,
-        messages: allMessages as any,
-        max_tokens: this.configService.get<number>('rag.maxTokens')!,
+        model: this.model,
+        messages: groqMessages,
         temperature,
+        max_tokens: this.maxTokens,
         stream: true,
       });
 
@@ -97,31 +154,5 @@ export class LlmService {
       this.logger.error('Streaming generation failed:', error);
       throw error;
     }
-  }
-
-  private tokenize(text: string): string[] {
-    // Simple tokenization - split on whitespace and punctuation
-    return text
-      .toLowerCase()
-      .replace(/[^\w\s]/g, ' ') // Replace punctuation with spaces
-      .split(/\s+/)
-      .filter((token) => token.length > 0);
-  }
-
-  private improvedHash(str: string): number {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      hash = (hash << 5) - hash + str.charCodeAt(i);
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return hash;
-  }
-
-  private getTokenWeight(token: string): number {
-    // Give higher weight to meaningful tokens
-    if (token.length < 3) return 0.5; // Short tokens get less weight
-    if (/^\d+$/.test(token)) return 0.7; // Numbers get moderate weight
-    if (token.length > 10) return 1.2; // Longer tokens get higher weight
-    return 1.0; // Default weight
   }
 }

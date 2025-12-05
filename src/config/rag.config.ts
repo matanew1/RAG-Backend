@@ -18,7 +18,14 @@ export default () => ({
     provider: 'groq',
     groq: {
       apiKey: process.env.GROQ_API_KEY,
-      model: process.env.GROQ_MODEL || 'llama3.1-8b-instant',
+      model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
     },
+    huggingface: {
+      apiKey: process.env.HF_API_KEY,
+      embeddingModel: process.env.HF_EMBEDDING_MODEL || 'sentence-transformers/all-MiniLM-L6-v2',
+    },
+  },
+  embedding: {
+    dimension: parseInt(process.env.EMBEDDING_DIMENSION || '384', 10),
   },
 });

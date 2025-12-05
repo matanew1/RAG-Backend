@@ -66,9 +66,12 @@ export class PineconeService {
     try {
       this.logger.log(`📝 Creating Pinecone index: ${this.indexName}`);
 
+      // Get embedding dimension from config (default: 384 for sentence-transformers/all-MiniLM-L6-v2)
+      const dimension = this.configService.get<number>('embedding.dimension') || 384;
+
       await this.pinecone.createIndex({
         name: this.indexName,
-        dimension: 1536, // Matching Groq embedding dimensions
+        dimension: dimension,
         metric: 'cosine',
         spec: {
           serverless: {

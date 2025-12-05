@@ -36,11 +36,11 @@ export class RagGateway implements OnGatewayConnection, OnGatewayDisconnect {
   /**
    * Handle client connection
    */
-  handleConnection(client: Socket) {
+  async handleConnection(client: Socket) {
     this.logger.log(`🔌 Client connected: ${client.id}`);
 
     // Create session for this client
-    const sessionId = this.ragService.createSession();
+    const sessionId = await this.ragService.createSession();
 
     this.clients.set(client.id, {
       sessionId,
@@ -144,7 +144,7 @@ export class RagGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * Clear session history
    */
   @SubscribeMessage('session:clear')
-  handleClearSession(@ConnectedSocket() client: Socket) {
+  async handleClearSession(@ConnectedSocket() client: Socket) {
     const session = this.clients.get(client.id);
 
     if (!session) {
@@ -152,7 +152,7 @@ export class RagGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    this.ragService.clearSession(session.sessionId);
+    await this.ragService.clearSession(session.sessionId);
 
     client.emit('session:cleared', {
       sessionId: session.sessionId,
@@ -166,7 +166,7 @@ export class RagGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * Get session info
    */
   @SubscribeMessage('session:info')
-  handleSessionInfo(@ConnectedSocket() client: Socket) {
+  async handleSessionInfo(@ConnectedSocket() client: Socket) {
     const session = this.clients.get(client.id);
 
     if (!session) {
@@ -174,7 +174,7 @@ export class RagGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    const info = this.ragService.getSessionInfo(session.sessionId);
+    const info = await this.ragService.getSessionInfo(session.sessionId);
 
     client.emit('session:info', info);
   }

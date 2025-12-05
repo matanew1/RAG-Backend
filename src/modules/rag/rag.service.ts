@@ -1,8 +1,13 @@
 // modules/rag/rag.service.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { LlmService } from '../llm/llm.service';
 import { VectorDbService } from '../vectordb/vectordb.service';
+import { RedisService } from '../redis/redis.service';
+import { ElasticsearchService } from '../elasticsearch/elasticsearch.service';
+import { ChatHistory, Document as DocumentEntity } from '../database/entities';
 import { VectorSearchResult } from '../vectordb/interfaces/vector/vector.interface';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -26,13 +31,28 @@ export class RagService {
   >();
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
   private readonly MAX_SESSIONS = 1000; // Limit concurrent sessions
+  private hasDataCache: { hasData: boolean; timestamp: number } | null = null;
+  private readonly HAS_DATA_CACHE_TTL = 30 * 1000; // 30 seconds
+
+  // Pre-cached config values for speed
+  private readonly topK: number;
+  private readonly temperature: number;
 
   constructor(
     private configService: ConfigService,
     private vectorDbService: VectorDbService,
     private llmService: LlmService,
+    private redisService: RedisService,
+    private elasticsearchService: ElasticsearchService,
+    @InjectRepository(ChatHistory)
+    private chatHistoryRepository: Repository<ChatHistory>,
+    @InjectRepository(DocumentEntity)
+    private documentRepository: Repository<DocumentEntity>,
   ) {
     this.globalInstructions = this.configService.get<string>('rag.defaultInstructions')!;
+    // Pre-cache config values
+    this.topK = this.configService.get<number>('rag.topK') || 5;
+    this.temperature = this.configService.get<number>('rag.temperature') || 0.7;
   }
 
   /**
@@ -51,22 +71,35 @@ export class RagService {
   }
 
   /**
-   * Train the RAG model with new data
+   * Train the RAG model with new data (Pinecone + Elasticsearch + PostgreSQL)
    */
   async trainWithData(content: string, metadata?: Record<string, any>): Promise<void> {
     try {
+      const docId = uuidv4();
+
       // Generate embedding
       const embedding = await this.llmService.generateEmbedding(content);
 
-      // Store in vector database
-      await this.vectorDbService.upsertDocument({
-        id: uuidv4(),
-        content,
-        embedding,
-        metadata,
-      });
+      // Store in all three databases in parallel
+      await Promise.all([
+        this.vectorDbService.upsertDocument({
+          id: docId,
+          content,
+          embedding,
+          metadata,
+        }),
+        this.elasticsearchService.indexDocument(docId, content, metadata),
+        this.documentRepository.save({
+          id: docId,
+          content,
+          metadata,
+          embeddingId: docId,
+          source: metadata?.source || 'api',
+          indexedAt: new Date(),
+        }),
+      ]);
 
-      this.logger.log('✅ Training data added');
+      this.logger.log('✅ Training data added (Pinecone + Elasticsearch + PostgreSQL)');
     } catch (error) {
       this.logger.error('Training failed:', error);
       throw error;
@@ -74,7 +107,7 @@ export class RagService {
   }
 
   /**
-   * Train with multiple documents - optimized for speed
+   * Train with multiple documents - optimized for speed (Pinecone + Elasticsearch + PostgreSQL)
    */
   async trainBatch(
     documents: Array<{ content: string; metadata?: Record<string, any> }>,
@@ -94,10 +127,31 @@ export class RagService {
         metadata: doc.metadata,
       }));
 
-      // Batch upsert to vector database
-      await this.vectorDbService.upsertDocuments(vectorDocs);
+      // Batch upsert to all three databases in parallel
+      await Promise.all([
+        this.vectorDbService.upsertDocuments(vectorDocs),
+        this.elasticsearchService.bulkIndex(
+          vectorDocs.map((doc) => ({
+            id: doc.id,
+            content: doc.content,
+            metadata: doc.metadata,
+          })),
+        ),
+        this.documentRepository.save(
+          vectorDocs.map((doc) => ({
+            id: doc.id,
+            content: doc.content,
+            metadata: doc.metadata,
+            embeddingId: doc.id,
+            source: doc.metadata?.source || 'batch-api',
+            indexedAt: new Date(),
+          })),
+        ),
+      ]);
 
-      this.logger.log(`✅ Batch training completed: ${documents.length} documents`);
+      this.logger.log(
+        `✅ Batch training completed (Pinecone + Elasticsearch + PostgreSQL): ${documents.length} documents`,
+      );
     } catch (error) {
       this.logger.error('Batch training failed:', error);
       throw error;
@@ -105,42 +159,81 @@ export class RagService {
   }
 
   /**
-   * Create a new chat session
+   * Create a new chat session (Redis-backed)
    */
-  createSession(): string {
+  async createSession(): Promise<string> {
     const sessionId = uuidv4();
 
-    this.sessions.set(sessionId, {
+    const session: ChatSession = {
       id: sessionId,
       instructions: this.globalInstructions,
       history: [],
       createdAt: new Date(),
       lastActivity: new Date(),
-    });
+    };
 
-    this.logger.log(`🆕 Session created: ${sessionId}`);
+    await this.redisService.set(`session:${sessionId}`, session, 3600); // 1 hour TTL
+
+    // Keep in-memory cache for performance
+    this.sessions.set(sessionId, session);
+
+    this.logger.log(`🆕 Session created (Redis): ${sessionId}`);
     return sessionId;
   }
 
   /**
-   * Get or create session
+   * Cleanup oldest sessions when limit is reached
    */
-  private getOrCreateSession(sessionId?: string): ChatSession {
-    if (!sessionId || !this.sessions.has(sessionId)) {
-      const newSessionId = this.createSession();
-      return this.sessions.get(newSessionId)!;
+  private cleanupOldSessions(): void {
+    const sessions = Array.from(this.sessions.entries());
+    sessions.sort((a, b) => a[1].lastActivity.getTime() - b[1].lastActivity.getTime());
+
+    // Remove oldest 20% of sessions
+    const toRemove = Math.floor(this.MAX_SESSIONS * 0.2);
+    for (let i = 0; i < toRemove; i++) {
+      this.sessions.delete(sessions[i][0]);
     }
 
-    const session = this.sessions.get(sessionId)!;
-    session.lastActivity = new Date();
-    return session;
+    this.logger.log(`🧹 Cleaned up ${toRemove} old sessions`);
   }
 
   /**
-   * Process a chat message with RAG - optimized for speed
+   * Get or create session (Redis-backed with local cache)
+   */
+  private async getOrCreateSession(sessionId?: string): Promise<ChatSession> {
+    if (!sessionId) {
+      const newSessionId = await this.createSession();
+      return this.sessions.get(newSessionId)!;
+    }
+
+    // Try local cache first
+    if (this.sessions.has(sessionId)) {
+      const session = this.sessions.get(sessionId)!;
+      session.lastActivity = new Date();
+      return session;
+    }
+
+    // Try Redis
+    const redisSession = await this.redisService.get<ChatSession>(`session:${sessionId}`);
+    if (redisSession) {
+      // Restore dates from JSON
+      redisSession.createdAt = new Date(redisSession.createdAt);
+      redisSession.lastActivity = new Date();
+      this.sessions.set(sessionId, redisSession);
+      this.logger.log(`📦 Session restored from Redis: ${sessionId}`);
+      return redisSession;
+    }
+
+    // Session not found, create new one
+    const newSessionId = await this.createSession();
+    return this.sessions.get(newSessionId)!;
+  }
+
+  /**
+   * Process a chat message with RAG - optimized for speed with hybrid search
    */
   async chat(message: string, sessionId?: string): Promise<string> {
-    const session = this.getOrCreateSession(sessionId);
+    const session = await this.getOrCreateSession(sessionId);
 
     try {
       // Check response cache first
@@ -150,28 +243,55 @@ export class RagService {
         this.logger.log('⚡ Using cached response');
         session.history.push({ role: 'user', content: message });
         session.history.push({ role: 'assistant', content: cached.response });
+        await this.persistSession(session);
         return cached.response;
       }
 
-      // 1. Get query variations (cached)
-      const queryVariations = await this.getCachedQueryVariations(message);
+      // Fast path: Skip hybrid search if no training data exists
+      let allRelevantDocs: VectorSearchResult[] = [];
 
-      // 2. Parallel retrieval for all variations
-      const allRelevantDocs = await this.parallelMultiQueryRetrieval(queryVariations);
+      // Quick check if we have any indexed documents (cache this check)
+      const hasIndexedData = await this.hasIndexedDocuments();
 
-      // 3. Fast deduplication and ranking
+      if (hasIndexedData) {
+        // 1. Get query variations (cached)
+        const queryVariations = await this.getCachedQueryVariations(message);
+
+        // 2. Hybrid retrieval: Parallel search in Pinecone + Elasticsearch
+        const [vectorDocs, elasticsearchDocs] = await Promise.all([
+          this.parallelMultiQueryRetrieval(queryVariations),
+          this.elasticsearchService.search(message, this.configService.get<number>('rag.topK')!),
+        ]);
+
+        // 3. Merge results from both sources (convert Elasticsearch results to VectorSearchResult format)
+        const esDocsConverted: VectorSearchResult[] = elasticsearchDocs.map((doc) => ({
+          id: doc.id,
+          content: doc.content,
+          score: doc.score,
+          metadata: doc.metadata,
+        }));
+
+        allRelevantDocs = [...vectorDocs, ...esDocsConverted];
+        this.logger.log(
+          `🔍 Hybrid search: ${vectorDocs.length} vector + ${esDocsConverted.length} elastic results`,
+        );
+      } else {
+        this.logger.log('⚡ Skipping search - no indexed documents');
+      }
+
+      // 4. Fast deduplication and ranking
       const relevantDocs = this.fastDeduplicateAndRerank(allRelevantDocs, message);
 
-      // 4. Build context
+      // 5. Build context
       const context = this.buildContext(relevantDocs);
 
-      // 5. Add user message to history
+      // 6. Add user message to history
       session.history.push({ role: 'user', content: message });
 
-      // 6. Build messages (limit history for speed)
+      // 7. Build messages (limit history for speed)
       const messages = this.buildOptimizedConversationMessages(session, context);
 
-      // 7. Generate response
+      // 8. Generate response
       const systemPrompt = this.buildSystemPrompt(session.instructions, context);
       const response = await this.llmService.generateResponse(
         messages,
@@ -179,18 +299,29 @@ export class RagService {
         this.configService.get<number>('rag.temperature'),
       );
 
-      // 8. Cache the response
+      // 9. Cache the response
       this.responseCache.set(cacheKey, {
         response,
         context: relevantDocs.map((d) => d.content),
         timestamp: Date.now(),
       });
 
-      // 9. Add assistant response to history
+      // 10. Add assistant response to history
       session.history.push({ role: 'assistant', content: response });
 
-      // 10. Cleanup old cache entries
-      this.cleanupCache();
+      // 11-12. Persist to Redis and PostgreSQL in parallel (non-blocking for response)
+      Promise.all([
+        this.persistSession(session),
+        this.persistChatHistoryToDb(
+          session.id,
+          message,
+          response,
+          relevantDocs.map((d) => d.content),
+        ),
+      ]).catch((err) => this.logger.error('Persistence error:', err));
+
+      // 13. Cleanup old cache entries (non-blocking)
+      setTimeout(() => this.cleanupCache(), 0);
 
       this.logger.log(`💬 Chat response generated for session: ${session.id}`);
       return response;
@@ -201,10 +332,11 @@ export class RagService {
   }
 
   /**
-   * Stream chat response - optimized for speed
+   * Stream chat response - optimized for fastest time-to-first-byte
    */
   async *chatStream(message: string, sessionId?: string): AsyncGenerator<string> {
-    const session = this.getOrCreateSession(sessionId);
+    // Start session lookup immediately (fast from local cache)
+    const session = await this.getOrCreateSession(sessionId);
 
     try {
       // Check cache first (for streaming, we can still use cached responses)
@@ -214,34 +346,62 @@ export class RagService {
         this.logger.log('⚡ Streaming cached response');
         session.history.push({ role: 'user', content: message });
         session.history.push({ role: 'assistant', content: cached.response });
+        session.lastActivity = new Date();
 
-        // Stream cached response in chunks
-        const words = cached.response.split(' ');
-        for (const word of words) {
-          yield word + ' ';
-          await new Promise((resolve) => setTimeout(resolve, 10)); // Small delay for streaming effect
+        // Persist session to Redis (non-blocking)
+        this.persistSession(session).catch(() => {});
+
+        // Stream cached response in larger chunks for speed
+        const chunkSize = 50; // characters per chunk
+        for (let i = 0; i < cached.response.length; i += chunkSize) {
+          yield cached.response.slice(i, i + chunkSize);
         }
         return;
       }
 
-      // Use optimized retrieval
-      const queryVariations = await this.getCachedQueryVariations(message);
-      const allRelevantDocs = await this.parallelMultiQueryRetrieval(queryVariations);
-      const relevantDocs = this.fastDeduplicateAndRerank(allRelevantDocs, message);
-      const context = this.buildContext(relevantDocs);
-
-      // Update history
+      // Add user message to history immediately
       session.history.push({ role: 'user', content: message });
 
-      const messages = this.buildOptimizedConversationMessages(session, context);
-      const systemPrompt = this.buildSystemPrompt(session.instructions, context);
+      // Build messages BEFORE searching - we can start LLM sooner
+      const messages = this.buildOptimizedConversationMessages(session, '');
 
-      // Stream response
+      // Fast path: If no indexed data, skip search entirely and start streaming immediately
+      const hasIndexedData = await this.hasIndexedDocuments();
+
+      let relevantDocs: VectorSearchResult[] = [];
+      let context = '';
+      let systemPrompt = this.buildSystemPrompt(session.instructions, '');
+
+      if (hasIndexedData) {
+        // Hybrid search: parallel Pinecone + Elasticsearch
+        const [vectorDocs, elasticsearchDocs] = await Promise.all([
+          this.vectorDbService.search(await this.llmService.generateEmbedding(message), this.topK),
+          this.elasticsearchService.search(message, this.topK),
+        ]);
+
+        // Merge and deduplicate results
+        const allRelevantDocs = [
+          ...vectorDocs,
+          ...elasticsearchDocs.map((doc) => ({
+            id: doc.id,
+            content: doc.content,
+            metadata: doc.metadata,
+            score: doc.score || 0,
+          })),
+        ];
+        relevantDocs = this.fastDeduplicateAndRerank(allRelevantDocs, message);
+        context = this.buildContext(relevantDocs);
+
+        // Rebuild with context
+        systemPrompt = this.buildSystemPrompt(session.instructions, context);
+      }
+
+      // Stream response - this is where the Cohere API latency happens
       let fullResponse = '';
       const stream = this.llmService.generateStreamingResponse(
         messages,
         systemPrompt,
-        this.configService.get<number>('rag.temperature'),
+        this.temperature,
       );
 
       for await (const chunk of stream) {
@@ -249,7 +409,7 @@ export class RagService {
         yield chunk;
       }
 
-      // Cache the complete response
+      // Cache the complete response (non-blocking)
       this.responseCache.set(cacheKey, {
         response: fullResponse,
         context: relevantDocs.map((d) => d.content),
@@ -258,9 +418,21 @@ export class RagService {
 
       // Save complete response to history
       session.history.push({ role: 'assistant', content: fullResponse });
+      session.lastActivity = new Date();
 
-      // Cleanup
-      this.cleanupCache();
+      // Persist to Redis and PostgreSQL in parallel (non-blocking - fire and forget)
+      Promise.all([
+        this.persistSession(session),
+        this.persistChatHistoryToDb(
+          session.id,
+          message,
+          fullResponse,
+          relevantDocs.map((d) => d.content),
+        ),
+      ]).catch((err) => this.logger.error('Persistence error:', err));
+
+      // Cleanup (non-blocking)
+      setTimeout(() => this.cleanupCache(), 0);
     } catch (error) {
       this.logger.error('Streaming chat failed:', error);
       throw error;
@@ -268,29 +440,49 @@ export class RagService {
   }
 
   /**
-   * Clear session history
+   * Clear session history (Redis-backed)
    */
-  clearSession(sessionId: string): void {
-    const session = this.sessions.get(sessionId);
+  async clearSession(sessionId: string): Promise<void> {
+    const session = await this.redisService.get<ChatSession>(`session:${sessionId}`);
     if (session) {
       session.history = [];
-      this.logger.log(`🗑️  Session cleared: ${sessionId}`);
+      await this.redisService.set(`session:${sessionId}`, session, 3600);
+
+      // Update local cache
+      if (this.sessions.has(sessionId)) {
+        this.sessions.get(sessionId)!.history = [];
+      }
+
+      this.logger.log(`🗑️  Session cleared (Redis): ${sessionId}`);
     }
   }
 
   /**
-   * Delete session
+   * Delete session (Redis-backed)
    */
-  deleteSession(sessionId: string): void {
+  async deleteSession(sessionId: string): Promise<void> {
+    await this.redisService.del(`session:${sessionId}`);
     this.sessions.delete(sessionId);
-    this.logger.log(`❌ Session deleted: ${sessionId}`);
+    this.logger.log(`❌ Session deleted (Redis): ${sessionId}`);
   }
 
   /**
-   * Get session info
+   * Get session info (Redis-backed)
    */
-  getSessionInfo(sessionId: string) {
-    const session = this.sessions.get(sessionId);
+  async getSessionInfo(sessionId: string): Promise<any> {
+    // Try local cache first
+    let session: ChatSession | undefined = this.sessions.get(sessionId);
+
+    // Fallback to Redis
+    if (!session) {
+      const redisSession = await this.redisService.get<ChatSession>(`session:${sessionId}`);
+      if (redisSession) {
+        session = redisSession;
+        session.createdAt = new Date(session.createdAt);
+        session.lastActivity = new Date(session.lastActivity);
+      }
+    }
+
     if (!session) return null;
 
     return {
@@ -299,6 +491,48 @@ export class RagService {
       createdAt: session.createdAt,
       lastActivity: session.lastActivity,
     };
+  }
+
+  /**
+   * Persist session to Redis
+   */
+  private async persistSession(session: ChatSession): Promise<void> {
+    await this.redisService.set(`session:${session.id}`, session, 3600);
+    this.sessions.set(session.id, session); // Update local cache
+  }
+
+  /**
+   * Persist chat history to PostgreSQL
+   */
+  private async persistChatHistoryToDb(
+    sessionId: string,
+    userMessage: string,
+    assistantResponse: string,
+    context: string[],
+  ): Promise<void> {
+    try {
+      // Save user message
+      await this.chatHistoryRepository.save({
+        sessionId,
+        role: 'user',
+        content: userMessage,
+        metadata: { timestamp: new Date() },
+      });
+
+      // Save assistant response
+      await this.chatHistoryRepository.save({
+        sessionId,
+        role: 'assistant',
+        content: assistantResponse,
+        context,
+        metadata: { timestamp: new Date() },
+      });
+
+      this.logger.log(`💾 Chat history persisted to DB for session: ${sessionId}`);
+    } catch (error) {
+      this.logger.error(`Failed to persist chat history to DB: ${error.message}`);
+      // Don't throw - chat should work even if DB persistence fails
+    }
   }
 
   /**
@@ -433,85 +667,18 @@ Return only the queries, one per line, no numbering or extra text.`;
   }
 
   /**
-   * Retrieve documents using multiple queries
-   */
-  private async multiQueryRetrieval(queries: string[]): Promise<VectorSearchResult[]> {
-    const topK = Math.ceil(this.configService.get<number>('rag.topK')! / queries.length);
-    const allResults: VectorSearchResult[] = [];
-
-    for (const query of queries) {
-      try {
-        const embedding = await this.llmService.generateEmbedding(query);
-        const results = await this.vectorDbService.search(embedding, topK);
-        allResults.push(...results);
-      } catch (error) {
-        this.logger.warn(`Query failed: ${query}`, error);
-      }
-    }
-
-    return allResults;
-  }
-
-  /**
-   * Remove duplicates and rerank results
-   */
-  private deduplicateAndRerank(
-    docs: VectorSearchResult[],
-    originalQuery: string,
-  ): VectorSearchResult[] {
-    // Remove duplicates based on content similarity
-    const uniqueDocs = new Map<string, VectorSearchResult>();
-
-    for (const doc of docs) {
-      const key = this.getContentHash(doc.content);
-      if (!uniqueDocs.has(key) || (uniqueDocs.get(key)!.score || 0) < (doc.score || 0)) {
-        uniqueDocs.set(key, doc);
-      }
-    }
-
-    // Rerank by relevance to original query
-    const docsArray = Array.from(uniqueDocs.values());
-    docsArray.sort((a, b) => (b.score || 0) - (a.score || 0));
-
-    return docsArray.slice(0, this.configService.get<number>('rag.topK')!);
-  }
-
-  /**
-   * Build better formatted context
+   * Build formatted context from documents
    */
   private buildContext(docs: VectorSearchResult[]): string {
     if (docs.length === 0) return '';
-
-    return `\n\nRelevant information:\n${docs
-      .map((doc, idx) => `[${idx + 1}] ${doc.content}`)
-      .join('\n\n')}`;
+    return `\n\nRelevant information:\n${docs.map((doc, idx) => `[${idx + 1}] ${doc.content}`).join('\n\n')}`;
   }
 
   /**
-   * Build conversation messages with better structure
-   */
-  private buildConversationMessages(
-    session: ChatSession,
-    context: string,
-  ): Array<{ role: string; content: string }> {
-    const recentHistory = session.history.slice(-8); // Keep more context
-    return [{ role: 'system', content: `${session.instructions}${context}` }, ...recentHistory];
-  }
-
-  /**
-   * Build improved system prompt
+   * Build system prompt with instructions and context
    */
   private buildSystemPrompt(instructions: string, context: string): string {
-    return `${instructions}
-
-When answering:
-- Use the provided context to give accurate, specific information
-- If context doesn't contain relevant information, say so clearly
-- Cite sources when using specific facts from the context
-- Be concise but comprehensive
-- Ask for clarification if the question is ambiguous
-
-${context}`;
+    return `${instructions}${context}`;
   }
 
   /**
@@ -524,6 +691,27 @@ ${context}`;
       hash = hash & hash;
     }
     return hash.toString();
+  }
+
+  /**
+   * Check if we have any indexed documents (cached for performance)
+   */
+  private async hasIndexedDocuments(): Promise<boolean> {
+    const now = Date.now();
+
+    // Return cached value if fresh
+    if (this.hasDataCache && now - this.hasDataCache.timestamp < this.HAS_DATA_CACHE_TTL) {
+      return this.hasDataCache.hasData;
+    }
+
+    // Quick count query - just check if any documents exist
+    const count = await this.documentRepository.count({ take: 1 });
+    const hasData = count > 0;
+
+    // Cache the result
+    this.hasDataCache = { hasData, timestamp: now };
+
+    return hasData;
   }
 
   /**

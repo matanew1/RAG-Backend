@@ -19,6 +19,7 @@ import { UpdateInstructionsDto } from './dto/instruction.dto/instruction.dto';
 import { TrainDataDto } from './dto/train-data.dto/train-data.dto';
 import { TrainBatchDto } from './dto/train-batch.dto';
 import { ChatMessageDto } from './dto/chat.dto/chat.dto';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('rag')
 @Controller('rag')
@@ -130,6 +131,7 @@ export class RagController {
       },
     },
   })
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 per minute
   async trainBatch(@Body() dto: TrainBatchDto) {
     await this.ragService.trainBatch(dto.documents);
 
@@ -157,8 +159,8 @@ export class RagController {
       },
     },
   })
-  createSession() {
-    const sessionId = this.ragService.createSession();
+  async createSession() {
+    const sessionId = await this.ragService.createSession();
 
     return {
       sessionId,
@@ -194,8 +196,8 @@ export class RagController {
       },
     },
   })
-  getSession(@Param('id') sessionId: string) {
-    const info = this.ragService.getSessionInfo(sessionId);
+  async getSession(@Param('id') sessionId: string) {
+    const info = await this.ragService.getSessionInfo(sessionId);
 
     if (!info) {
       return {
@@ -214,8 +216,8 @@ export class RagController {
   @ApiOperation({ summary: 'Delete chat session' })
   @ApiParam({ name: 'id', description: 'Session ID', example: 'session-123' })
   @ApiResponse({ status: 204, description: 'Session deleted successfully' })
-  deleteSession(@Param('id') sessionId: string) {
-    this.ragService.deleteSession(sessionId);
+  async deleteSession(@Param('id') sessionId: string) {
+    await this.ragService.deleteSession(sessionId);
   }
 
   /**
@@ -236,8 +238,8 @@ export class RagController {
       },
     },
   })
-  clearSession(@Param('id') sessionId: string) {
-    this.ragService.clearSession(sessionId);
+  async clearSession(@Param('id') sessionId: string) {
+    await this.ragService.clearSession(sessionId);
 
     return {
       success: true,

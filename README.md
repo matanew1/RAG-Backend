@@ -1,17 +1,22 @@
 # RAG Backend with NestJS
 
-A powerful Retrieval-Augmented Generation (RAG) backend built with NestJS, featuring real-time chat capabilities via WebSocket, vector database integration with Pinecone, and LLM integration with Groq.
+A powerful Retrieval-Augmented Generation (RAG) backend built with NestJS, featuring real-time chat capabilities via WebSocket, vector database integration with Pinecone, and LLM integration with Groq + HuggingFace.
 
 ## 🚀 Features
 
-- **Real-time Chat**: WebSocket-based chat with streaming responses
-- **Vector Database**: Pinecone integration for efficient document retrieval
-- **LLM Integration**: Groq API for high-performance language model responses
-- **Session Management**: Persistent chat sessions with history
-- **Document Training**: Add and manage training data for the RAG system
+- **Real-time Chat**: WebSocket-based chat with streaming responses via Groq llama-3.3-70b-versatile
+- **Vector Database**: Pinecone integration for semantic search (384-dim embeddings, cosine similarity)
+- **Hybrid Search**: Elasticsearch + Pinecone parallel queries for optimal retrieval
+- **LLM Integration**: Groq (fast LLM) + HuggingFace (free embeddings)
+- **Session Management**: Redis-backed distributed sessions with 1-hour TTL and local cache
+- **Persistent Storage**: PostgreSQL with TypeORM (User, Document, ChatHistory entities)
+- **Triple Persistence**: All training data indexed in Pinecone + Elasticsearch + PostgreSQL
+- **Monitoring**: Prometheus metrics collection with Grafana dashboards
+- **Document Training**: Batch and single document training with multi-database indexing
 - **RESTful API**: Complete HTTP API with Swagger documentation
-- **Docker Support**: Easy deployment with Docker and Docker Compose
+- **Load Balanced**: Nginx reverse proxy (port 8080) with round-robin distribution to 2 backend instances
 - **TypeScript**: Full TypeScript support with strict typing
+- **Environment Validation**: Automatic validation of required environment variables on startup
 
 ## 📋 Prerequisites
 
@@ -20,8 +25,9 @@ Before running this application, make sure you have:
 - **Node.js** (v18 or higher)
 - **npm** or **pnpm** package manager
 - **Pinecone** account and API key
-- **Groq** account and API key
-- **Docker** (optional, for containerized deployment)
+- **Groq** account and API key (free at https://console.groq.com)
+- **HuggingFace** account and API key (free at https://huggingface.co/settings/tokens)
+- **Docker** and **Docker Compose** (for full deployment with all services)
 
 ## 🛠️ Installation
 
@@ -53,14 +59,36 @@ Before running this application, make sure you have:
    NODE_ENV=development
    PORT=3001
 
-   # Groq AI (get from https://console.groq.com/)
+   # Groq AI (get from https://console.groq.com)
    GROQ_API_KEY=your_groq_api_key_here
-   GROQ_MODEL=llama3.1-8b-instant
+   GROQ_MODEL=llama-3.3-70b-versatile
+
+   # HuggingFace Embeddings (get from https://huggingface.co/settings/tokens)
+   HF_API_KEY=your_huggingface_api_key_here
+   HF_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+   EMBEDDING_DIMENSION=384
 
    # Pinecone Vector Database (get from https://app.pinecone.io/)
    PINECONE_API_KEY=your_pinecone_api_key_here
-   PINECONE_ENVIRONMENT=us-west1-gcp
-   PINECONE_INDEX_NAME=rag-chatbot
+   PINECONE_ENVIRONMENT=us-east-1
+   PINECONE_INDEX_NAME=rag-chatbot-384
+
+   # Redis Configuration (distributed sessions across backend instances)
+   REDIS_HOST=localhost
+   REDIS_PORT=6379
+
+   # PostgreSQL Configuration (TypeORM persistence - User, Document, ChatHistory)
+   DB_HOST=localhost
+   DB_PORT=5432
+   DB_NAME=rag_backend
+   DB_USER=raguser
+   DB_PASSWORD=changeme
+
+   # Elasticsearch Configuration (hybrid search with Pinecone)
+   ELASTICSEARCH_URL=http://localhost:9200
+
+   # Grafana Configuration
+   GRAFANA_PASSWORD=admin
 
    # RAG Configuration
    RAG_DEFAULT_INSTRUCTIONS=You are a helpful AI assistant.
@@ -73,11 +101,15 @@ Before running this application, make sure you have:
 ### 🔑 API Keys Setup
 
 1. **Groq API Key:**
-   - Visit [Groq Console](https://console.groq.com/)
-   - Create an account and generate an API key
-   - Add it to your `.env` file as `GROQ_API_KEY`
+   - Visit [Groq Console](https://console.groq.com)
+   - Create an account and generate an API key (free tier available)
 
-2. **Pinecone API Key:**
+2. **HuggingFace API Key:**
+   - Visit [HuggingFace Settings](https://huggingface.co/settings/tokens)
+   - Create a read token (free)
+   - Add it to your `.env` file as `HF_API_KEY`
+
+3. **Pinecone API Key:**
    - Visit [Pinecone Console](https://app.pinecone.io/)
    - Create an account and generate an API key
    - Add it to your `.env` file as `PINECONE_API_KEY`
@@ -92,16 +124,16 @@ The application uses Pinecone as the vector database. You need to create the req
    ```
 
    This script will:
-   - Create a Pinecone index named "rag-chatbot" (or your configured name)
-   - Configure it with 1536 dimensions for optimal embedding storage
+   - Create a Pinecone index named "rag-chatbot-384" (or your configured name)
+   - Configure it with 384 dimensions for HuggingFace all-MiniLM-L6-v2 embeddings
    - Use cosine similarity for vector matching
    - Wait for the index to be ready
 
 2. **Manual Index Creation (Alternative):**
    - Go to your [Pinecone Dashboard](https://app.pinecone.io/)
    - Create a new index with:
-     - **Name**: `rag-chatbot` (or your configured `PINECONE_INDEX_NAME`)
-     - **Dimension**: `1536`
+     - **Name**: `rag-chatbot-384` (or your configured `PINECONE_INDEX_NAME`)
+     - **Dimension**: `384` (for HuggingFace all-MiniLM-L6-v2)
      - **Metric**: `cosine`
      - **Environment**: Your preferred region
 
@@ -117,6 +149,8 @@ pnpm run start:dev
 ```
 
 The application will start on `http://localhost:3001` with hot-reload enabled.
+
+**Note**: Development mode runs a single instance. For load-balanced multi-instance setup, use Docker Compose (see below).
 
 ### Production Mode
 ```bash
@@ -134,10 +168,49 @@ npm run start:debug
 
 ## 🐳 Docker Deployment
 
-### Using Docker Compose (Recommended)
+### Using Docker Compose (Recommended - Full Stack)
 ```bash
 # Make sure your .env file has the required API keys
 docker-compose up -d
+
+# Verify all services are running
+docker-compose ps
+
+# View load balancer logs
+docker-compose logs -f nginx
+```
+
+This will start:
+- **2 Backend instances** (rag-backend-1 on port 3001, rag-backend-2 on port 3002)
+- **Nginx** load balancer on port 8080 with round-robin distribution
+- **Redis** for distributed sessions on port 6379
+- **PostgreSQL** with TypeORM on port 5432
+- **Elasticsearch** for hybrid search on port 9200
+- **Prometheus** for metrics on port 9090
+- **Grafana** for dashboards on port 3000
+
+### Access Services
+- **Application (via Nginx - RECOMMENDED)**: http://localhost:8080
+- **Backend-1 (direct)**: http://localhost:3001
+- **Backend-2 (direct)**: http://localhost:3002
+- **Swagger API Docs**: http://localhost:8080/api
+- **Grafana Dashboard**: http://localhost:3000 (admin / your_grafana_password)
+- **Prometheus**: http://localhost:9090
+- **Elasticsearch**: http://localhost:9200
+
+**Important**: Always use `http://localhost:8080` for frontend integration to ensure proper load balancing across both backend instances.
+
+### Verify Load Balancing
+```powershell
+# Test load distribution (PowerShell)
+for ($i=1; $i -le 10; $i++) {
+  curl.exe http://localhost:8080/rag/config | ConvertFrom-Json
+}
+
+# Check request distribution across backends
+docker-compose logs rag-backend-1 --tail=20 | Select-String "GET /rag/config"
+docker-compose logs rag-backend-2 --tail=20 | Select-String "GET /rag/config"
+# Should see approximately 50% distribution to each backend
 ```
 
 ### Using Docker directly
@@ -152,8 +225,10 @@ docker run -p 3001:3001 --env-file .env rag-backend
 ## 📚 API Documentation
 
 Once the application is running, visit:
-- **Swagger UI**: http://localhost:3001/api
-- **Health Check**: http://localhost:3001/rag/health
+- **Swagger UI**: http://localhost:8080/api (via Nginx - load balanced)
+- **Health Check**: http://localhost:8080/rag/health
+- **Direct Backend-1**: http://localhost:3001/api (development only)
+- **Direct Backend-2**: http://localhost:3002/api (development only)
 
 ### REST API Endpoints
 
@@ -172,7 +247,13 @@ Once the application is running, visit:
 
 ## 🌐 WebSocket Integration
 
+### Production (Docker Compose - Load Balanced)
+Connect to the WebSocket server at: `ws://localhost:8080/chat`
+
+### Development (Single Instance)
 Connect to the WebSocket server at: `ws://localhost:3001/chat`
+
+**Note**: When using Docker Compose, always connect via Nginx (port 8080) to ensure your WebSocket connection is load-balanced and sessions are properly managed across backend instances via Redis.
 
 ### WebSocket Events
 
@@ -210,27 +291,27 @@ Open `websocket-test.html` in your browser to interactively test WebSocket funct
 ### API Testing with cURL
 
 ```bash
-# Health check
-curl http://localhost:3001/rag/health
+# Health check (via Nginx load balancer)
+curl http://localhost:8080/rag/health
 
 # Get configuration
-curl http://localhost:3001/rag/config
+curl http://localhost:8080/rag/config
 
 # Create a chat session
-curl -X POST http://localhost:3001/rag/session \
+curl -X POST http://localhost:8080/rag/session \
   -H "Content-Type: application/json" \
   -d '{}'
 
 # Send a chat message
-curl -X POST http://localhost:3001/rag/chat \
+curl -X POST http://localhost:8080/rag/chat \
   -H "Content-Type: application/json" \
   -d '{
     "message": "Hello, how are you?",
     "sessionId": "your-session-id"
   }'
 
-# Train with a document
-curl -X POST http://localhost:3001/rag/train \
+# Train with a document (indexes in Pinecone + Elasticsearch + PostgreSQL)
+curl -X POST http://localhost:8080/rag/train \
   -H "Content-Type: application/json" \
   -d '{
     "content": "This is a sample document for training.",
@@ -238,6 +319,22 @@ curl -X POST http://localhost:3001/rag/train \
       "source": "example.txt",
       "category": "documentation"
     }
+  }'
+
+# Train multiple documents in batch
+curl -X POST http://localhost:8080/rag/train/batch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "documents": [
+      {
+        "content": "First document content",
+        "metadata": {"source": "doc1.txt"}
+      },
+      {
+        "content": "Second document content",
+        "metadata": {"source": "doc2.txt"}
+      }
+    ]
   }'
 ```
 
@@ -261,31 +358,43 @@ npm run test:e2e
 ```
 src/
 ├── app.module.ts                 # Main application module
-├── main.ts                       # Application bootstrap
-├── common/                       # Shared utilities
-│   ├── decorators/               # Custom decorators
-│   ├── filters/                  # Exception filters
-│   ├── guards/                   # Authentication guards
-│   ├── interceptors/             # Request/response interceptors
-│   └── pipes/                    # Validation pipes
+├── main.ts                       # Application bootstrap with crypto polyfill
 ├── config/
-│   └── rag.config.ts             # Configuration settings
+│   ├── rag.config.ts             # Configuration settings
+│   └── env.validation.ts         # Environment variable validation
 ├── modules/                      # Feature modules
-│   ├── llm/                      # LLM integration
+│   ├── database/                 # PostgreSQL + TypeORM
+│   │   ├── database.module.ts
+│   │   └── entities/
+│   │       ├── user.entity.ts
+│   │       ├── document.entity.ts
+│   │       └── chat-history.entity.ts
+│   ├── elasticsearch/            # Elasticsearch integration
+│   │   ├── elasticsearch.module.ts
+│   │   └── elasticsearch.service.ts
+│   ├── llm/                      # Groq + HuggingFace integration
 │   │   ├── llm.module.ts
-│   │   ├── llm.service.ts
-│   │   └── dto/
+│   │   └── llm.service.ts
+│   ├── pinecone/                 # Pinecone vector database
+│   │   ├── pinecone.module.ts
+│   │   ├── pinecone.service.ts
+│   │   └── pinecone-init.service.ts
 │   ├── rag/                      # RAG functionality
 │   │   ├── rag.module.ts
-│   │   ├── rag.service.ts
-│   │   ├── rag.controller.ts
+│   │   ├── rag.service.ts        # Core RAG logic with hybrid search
+│   │   ├── rag.controller.ts     # REST endpoints
 │   │   ├── rag.gateway.ts        # WebSocket gateway
 │   │   └── dto/                  # Data transfer objects
-│   └── vectordb/                 # Vector database
+│   ├── redis/                    # Redis session management
+│   │   ├── redis.module.ts
+│   │   └── redis.service.ts
+│   └── vectordb/                 # Vector database abstraction
 │       ├── vectordb.module.ts
 │       ├── vectordb.service.ts
 │       └── interfaces/
-└── websocket-test.html           # WebSocket testing interface
+├── docker-compose.yml            # Multi-service orchestration
+├── nginx.conf                    # Load balancer configuration
+└── create-index.ts               # Pinecone index creation script
 ```
 
 ## 🔧 Development
@@ -317,10 +426,22 @@ npm run build
 | `NODE_ENV` | Environment mode | `development` | No |
 | `PORT` | Server port | `3001` | No |
 | `GROQ_API_KEY` | Groq API key | - | Yes |
-| `GROQ_MODEL` | Groq model name | `llama3.1-8b-instant` | No |
+| `GROQ_MODEL` | Groq chat model | `llama-3.3-70b-versatile` | No |
+| `HF_API_KEY` | HuggingFace API key | - | Yes |
+| `HF_EMBEDDING_MODEL` | HuggingFace embedding model | `sentence-transformers/all-MiniLM-L6-v2` | No |
+| `EMBEDDING_DIMENSION` | Embedding vector dimension | `384` | No |
 | `PINECONE_API_KEY` | Pinecone API key | - | Yes |
-| `PINECONE_ENVIRONMENT` | Pinecone environment | `us-west1-gcp` | No |
-| `PINECONE_INDEX_NAME` | Pinecone index name | `rag-chatbot` | No |
+| `PINECONE_ENVIRONMENT` | Pinecone environment | `us-east-1` | No |
+| `PINECONE_INDEX_NAME` | Pinecone index name | `rag-chatbot-384` | No |
+| `REDIS_HOST` | Redis host | `localhost` | No |
+| `REDIS_PORT` | Redis port | `6379` | No |
+| `DB_HOST` | PostgreSQL host | `localhost` | No |
+| `DB_PORT` | PostgreSQL port | `5432` | No |
+| `DB_NAME` | PostgreSQL database | `rag_backend` | No |
+| `DB_USER` | PostgreSQL user | `raguser` | No |
+| `DB_PASSWORD` | PostgreSQL password | `changeme` | Yes |
+| `ELASTICSEARCH_URL` | Elasticsearch URL | `http://localhost:9200` | No |
+| `GRAFANA_PASSWORD` | Grafana admin password | `admin` | No |
 | `RAG_DEFAULT_INSTRUCTIONS` | Default system prompt | `"You are a helpful AI assistant."` | No |
 | `RAG_MAX_HISTORY_LENGTH` | Max chat history length | `10` | No |
 | `RAG_TEMPERATURE` | LLM temperature | `0.7` | No |
@@ -352,19 +473,41 @@ This project is licensed under the UNLICENSED license.
 
 1. **Pinecone Index Not Found (404)**
    - Run `npx ts-node create-index.ts` to create the required index
+   - Verify index dimension is 384 (for HuggingFace all-MiniLM-L6-v2)
    - Check your `PINECONE_INDEX_NAME` in `.env`
 
-2. **Groq API Errors**
-   - Verify your `GROQ_API_KEY` is correct
-   - Check if the model name is valid (try `llama3.1-8b-instant`)
+2. **LLM API Errors**
+   - Verify your `GROQ_API_KEY` is correct (from https://console.groq.com)
+   - Verify your `HF_API_KEY` is correct (from https://huggingface.co/settings/tokens)
+   - Check Groq rate limits (30 req/min on free tier)
+   - Try the HuggingFace model in their web interface first
 
 3. **WebSocket Connection Issues**
-   - Ensure the server is running on the correct port
+   - Use `ws://localhost:8080/chat` for Docker Compose (via Nginx)
+   - Use `ws://localhost:3001/chat` for development mode
    - Check CORS settings if connecting from a different domain
+   - Verify Nginx is running: `docker-compose ps nginx`
 
-4. **Build Errors**
-   - Clear node_modules: `rm -rf node_modules && npm install`
-   - Check TypeScript compilation: `npm run build`
+4. **Load Balancing Not Working**
+   - Ensure both backends are running: `docker-compose ps`
+   - Verify Nginx is on port 8080: `curl http://localhost:8080/rag/health`
+   - Check logs: `docker-compose logs nginx`
+   - Test distribution: Run multiple requests and check backend logs
+
+5. **PostgreSQL Connection Errors**
+   - Verify database credentials in `.env`
+   - Check if PostgreSQL container is running: `docker-compose ps postgres`
+   - SSL should be disabled for Docker: Check `database.module.ts`
+
+6. **Redis Session Issues**
+   - Verify Redis is running: `docker-compose ps redis`
+   - Check Redis connection: `docker-compose logs redis`
+   - Sessions expire after 1 hour (configurable)
+
+7. **Build Errors**
+   - Clear node_modules: `rm -rf node_modules && pnpm install`
+   - Check TypeScript compilation: `pnpm run build`
+   - Verify Node.js version: `node --version` (requires v18+)
 
 ## 🚀 Deployment
 

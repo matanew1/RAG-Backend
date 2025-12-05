@@ -1,33 +1,27 @@
 // modules/vectordb/vectordb.service.ts
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Pinecone } from '@pinecone-database/pinecone';
 import { VectorDocument, VectorSearchResult } from './interfaces/vector/vector.interface';
+import { PineconeService } from '../pinecone/pinecone.service';
 
 @Injectable()
 export class VectorDbService {
   private readonly logger = new Logger(VectorDbService.name);
-  private pinecone: Pinecone;
   private index: any;
 
-  constructor(private configService: ConfigService) {
-    this.initializePinecone();
+  constructor(private pineconeService: PineconeService) {
+    this.initializeIndex();
   }
 
-  private async initializePinecone() {
+  private initializeIndex() {
     try {
-      const apiKey = this.configService.get<string>('vectorDb.pinecone.apiKey');
+      const pinecone = this.pineconeService.getClient();
+      const indexName = this.pineconeService.getIndexName();
+      this.index = pinecone.index(indexName);
 
-      this.pinecone = new Pinecone({
-        apiKey: apiKey!,
-      });
-
-      const indexName = this.configService.get<string>('vectorDb.pinecone.indexName')!;
-      this.index = this.pinecone.index(indexName);
-
-      this.logger.log('✅ Pinecone initialized successfully');
+      this.logger.log('✅ Vector database initialized successfully');
     } catch (error) {
-      this.logger.error('❌ Failed to initialize Pinecone:', error);
+      this.logger.error('❌ Failed to initialize vector database:', error);
+      throw error;
     }
   }
 
@@ -159,8 +153,9 @@ export class VectorDbService {
    */
   async getIndexInfo(): Promise<any> {
     try {
-      const indexName = this.configService.get<string>('vectorDb.pinecone.indexName')!;
-      const indexList = await this.pinecone.listIndexes();
+      const pinecone = this.pineconeService.getClient();
+      const indexName = this.pineconeService.getIndexName();
+      const indexList = await pinecone.listIndexes();
       const indexInfo = indexList.indexes?.find((idx) => idx.name === indexName);
 
       if (!indexInfo) {
@@ -178,7 +173,6 @@ export class VectorDbService {
               ? 'Ready'
               : 'Not Ready'
             : indexInfo.status || 'Unknown',
-        // Note: createdAt might not be available in all Pinecone API versions
         createdAt: (indexInfo as any).createdAt
           ? new Date((indexInfo as any).createdAt).toISOString()
           : 'Not available',
@@ -197,7 +191,8 @@ export class VectorDbService {
       // Pinecone doesn't have a direct list method, so we'll use query with empty vector
       // This is a workaround - scores will be 0.0 since we're using a zero vector
       // In a production system, you'd want to store document IDs separately for proper listing
-      const emptyVector = new Array(1536).fill(0);
+      // Using 384 dimensions to match sentence-transformers/all-MiniLM-L6-v2
+      const emptyVector = new Array(384).fill(0);
       const results = await this.index.query({
         vector: emptyVector,
         topK: Math.min(limit + offset, 1000), // Pinecone max is 1000

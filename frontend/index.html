@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="RAG-powered AI Chatbot with real-time responses">
+    <meta name="theme-color" content="#6366f1">
+
+    <title>RAG Chat</title>
+
+    <!-- Preconnect to external resources -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <!-- Critical CSS inline for faster first paint -->
+    <style>
+        /* Critical path CSS - minimal styles for initial render */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0
+        }
+
+        html {
+            font-size: 16px
+        }
+
+        body {
+            font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f0f1a;
+            color: #f8fafc;
+            min-height: 100vh
+        }
+
+        .app {
+            display: flex;
+            min-height: 100vh
+        }
+
+        .loading-screen {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0f0f1a;
+            z-index: 9999
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 3px solid rgba(99, 102, 241, 0.2);
+            border-top-color: #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+    </style>
+
+    <!-- Load fonts asynchronously -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    </noscript>
+
+    <!-- CSS files - loaded in order -->
+    <link rel="stylesheet" href="/frontend/css/variables.css">
+    <link rel="stylesheet" href="/frontend/css/base.css">
+    <link rel="stylesheet" href="/frontend/css/layout.css">
+    <link rel="stylesheet" href="/frontend/css/components.css">
+    <link rel="stylesheet" href="/frontend/css/responsive.css">
+</head>
+
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loading-screen">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <div class="app" id="app" style="opacity:0">
+        <!-- Background Effects -->
+        <div class="bg-effects" aria-hidden="true"></div>
+
+        <!-- Mobile Sidebar Overlay -->
+        <div class="sidebar-overlay" aria-hidden="true"></div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar glass">
+            <div class="sidebar-header">
+                <div class="sidebar-logo">🤖</div>
+                <h1 class="sidebar-title">RAG Chat</h1>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">Chat</div>
+                    <button class="nav-item active" id="new-chat-btn">
+                        <span class="nav-item-icon">💬</span>
+                        <span>New Chat</span>
+                    </button>
+                    <button class="nav-item" id="clear-chat-btn">
+                        <span class="nav-item-icon">🗑️</span>
+                        <span>Clear History</span>
+                    </button>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">Data</div>
+                    <button class="nav-item" id="training-btn">
+                        <span class="nav-item-icon">📚</span>
+                        <span>Train Document</span>
+                    </button>
+                    <button class="nav-item" id="stats-btn">
+                        <span class="nav-item-icon">📊</span>
+                        <span>Statistics</span>
+                    </button>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">System</div>
+                    <button class="nav-item" id="settings-btn">
+                        <span class="nav-item-icon">⚙️</span>
+                        <span>Settings</span>
+                    </button>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <a href="/api" target="_blank" class="nav-item">
+                    <span class="nav-item-icon">📖</span>
+                    <span>API Docs</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header glass">
+                <div class="header-left">
+                    <button class="btn btn-ghost btn-icon" id="menu-toggle" aria-label="Toggle menu">
+                        ☰
+                    </button>
+                    <h2>Chat</h2>
+                </div>
+
+                <div class="header-right">
+                    <button class="status-indicator" id="connection-status" title="Click to reconnect">
+                        <span class="status-dot"></span>
+                        <span>Connecting...</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Chat Container -->
+            <div class="chat-container">
+                <!-- Messages -->
+                <div class="messages" id="messages" role="log" aria-live="polite">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">💬</div>
+                        <h3 class="empty-state-title">Start a conversation</h3>
+                        <p>Ask me anything! I'm here to help.</p>
+                    </div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="input-container glass">
+                    <div class="input-wrapper">
+                        <textarea class="input-field" id="message-input" placeholder="Type your message..." rows="1"
+                            aria-label="Message input"></textarea>
+                        <button class="btn btn-primary btn-icon" id="send-button" aria-label="Send message">
+                            ➤
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Socket.IO Client (loaded async) -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" defer></script>
+
+    <!-- App Scripts (ES Modules) -->
+    <script type="module" src="/frontend/js/app.js"></script>
+
+    <!-- Remove loading screen when app is ready -->
+    <script>
+        window.addEventListener('load', function () {
+            setTimeout(function () {
+                document.getElementById('loading-screen').style.opacity = '0';
+                document.getElementById('app').style.opacity = '1';
+                setTimeout(function () {
+                    document.getElementById('loading-screen').style.display = 'none';
+                }, 300);
+            }, 100);
+        });
+    </script>
+</body>
+
+</html>

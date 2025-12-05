@@ -1,0 +1,45 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'rag-backend-cluster'
+    environment: 'production'
+
+scrape_configs:
+  # Backend service health checks (custom endpoint that exists)
+  - job_name: 'rag-backend-health'
+    static_configs:
+      - targets:
+          - 'rag-backend-1:3001'
+          - 'rag-backend-2:3001'
+    metrics_path: '/rag/health'
+    scrape_interval: 30s
+    # Don't fail if endpoint returns non-prometheus format
+    honor_labels: true
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets:
+          - 'localhost:9090'
+
+  # Elasticsearch metrics (if available)
+  - job_name: 'elasticsearch'
+    static_configs:
+      - targets:
+          - 'elasticsearch:9200'
+    metrics_path: '/_cluster/health'
+    scrape_interval: 60s
+    params:
+      format: ['json']
+
+# Alerting rules (optional - can be expanded)
+rule_files:
+  # - 'alerts/*.yml'
+
+# Alertmanager configuration (optional)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#             - 'alertmanager:9093'
