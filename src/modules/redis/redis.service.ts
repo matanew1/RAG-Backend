@@ -14,10 +14,12 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   constructor(private configService: ConfigService) {
     this.host = this.configService.get<string>('REDIS_HOST') || 'localhost';
     this.port = this.configService.get<number>('REDIS_PORT') || 6379;
+    const password = this.configService.get<string>('REDIS_PASSWORD');
 
     this.client = new Redis({
       host: this.host,
       port: this.port,
+      password: password || undefined, // Optional Redis authentication
       retryStrategy: (times) => {
         if (times > 30) {
           this.logger.error('Redis max retries exceeded, giving up');
@@ -131,5 +133,25 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async onModuleDestroy() {
     await this.client.quit();
     this.logger.log('Redis connection closed');
+  }
+
+  /**
+   * Health check for Redis connectivity
+   */
+  async isHealthy(): Promise<{ healthy: boolean; latencyMs?: number; error?: string }> {
+    const start = Date.now();
+    try {
+      await this.client.ping();
+      return { healthy: true, latencyMs: Date.now() - start };
+    } catch (error) {
+      return { healthy: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get connection status
+   */
+  getConnectionStatus(): boolean {
+    return this.isConnected;
   }
 }

@@ -209,7 +209,7 @@ class ChatModule {
   }
 
   /**
-   * Show typing indicator
+   * Show typing indicator with skeleton effect
    */
   showTypingIndicator() {
     this.hideTypingIndicator();
@@ -219,26 +219,42 @@ class ChatModule {
       {
         class: 'message assistant',
         id: 'typing-indicator',
+        style: { opacity: '0', transform: 'translateY(10px)' },
       },
       [
         createElement('div', { class: 'message-avatar' }, ['🤖']),
-        createElement('div', { class: 'typing-indicator' }, [
-          createElement('span'),
-          createElement('span'),
-          createElement('span'),
+        createElement('div', { class: 'message-content' }, [
+          createElement('div', { class: 'typing-indicator' }, [
+            createElement('span'),
+            createElement('span'),
+            createElement('span'),
+          ]),
         ]),
       ],
     );
 
     this.messagesContainer.appendChild(indicator);
+
+    // Animate in
+    requestAnimationFrame(() => {
+      indicator.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+      indicator.style.opacity = '1';
+      indicator.style.transform = 'translateY(0)';
+    });
+
     this.scrollToBottom();
   }
 
   /**
-   * Hide typing indicator
+   * Hide typing indicator with animation
    */
   hideTypingIndicator() {
-    $('#typing-indicator')?.remove();
+    const indicator = $('#typing-indicator');
+    if (indicator) {
+      indicator.style.opacity = '0';
+      indicator.style.transform = 'translateY(-10px)';
+      setTimeout(() => indicator.remove(), 200);
+    }
   }
 
   /**
@@ -255,23 +271,48 @@ class ChatModule {
   }
 
   /**
-   * Scroll to bottom of messages
+   * Scroll to bottom of messages - smooth with requestAnimationFrame
    */
   scrollToBottom() {
-    requestAnimationFrame(() => {
-      this.messagesContainer.scrollTop = this.messagesContainer.scrollHeight;
+    if (this._scrollRAF) {
+      cancelAnimationFrame(this._scrollRAF);
+    }
+
+    this._scrollRAF = requestAnimationFrame(() => {
+      const container = this.messagesContainer;
+      const targetScroll = container.scrollHeight;
+      const currentScroll = container.scrollTop;
+      const distance = targetScroll - currentScroll - container.clientHeight;
+
+      // Use smooth scroll for small distances, instant for large
+      if (distance > 500) {
+        container.scrollTop = targetScroll;
+      } else {
+        container.scrollTo({
+          top: targetScroll,
+          behavior: 'smooth',
+        });
+      }
     });
   }
 
   /**
-   * Update send button state
+   * Update send button state with animation
    */
   updateSendButton(disabled) {
     if (this.sendButton) {
       this.sendButton.disabled = disabled;
-      this.sendButton.innerHTML = disabled
-        ? '<span class="typing-indicator"><span></span><span></span><span></span></span>'
-        : '➤';
+
+      if (disabled) {
+        this.sendButton.innerHTML = `
+          <span class="typing-indicator" style="transform: scale(0.6);">
+            <span></span><span></span><span></span>
+          </span>`;
+        this.sendButton.style.transform = 'scale(0.95)';
+      } else {
+        this.sendButton.innerHTML = '➤';
+        this.sendButton.style.transform = '';
+      }
     }
   }
 

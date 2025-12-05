@@ -36,7 +36,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "wget -q --spider http://localhost:3001/rag/health || exit 1",
+          "wget -q --spider http://localhost:3001/v1/rag/health || exit 1",
         ]
       interval: 30s
       timeout: 10s
@@ -83,7 +83,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "wget -q --spider http://localhost:3001/rag/health || exit 1",
+          "wget -q --spider http://localhost:3001/v1/rag/health || exit 1",
         ]
       interval: 30s
       timeout: 10s

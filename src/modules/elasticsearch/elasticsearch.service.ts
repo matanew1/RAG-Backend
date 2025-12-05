@@ -15,6 +15,10 @@ export class ElasticsearchService implements OnModuleInit {
 
     this.client = new Client({
       node: elasticsearchUrl,
+      // Connection pool configuration
+      maxRetries: 3,
+      requestTimeout: 30000,
+      sniffOnStart: false,
     });
   }
 
@@ -141,6 +145,44 @@ export class ElasticsearchService implements OnModuleInit {
       }
     } catch (error) {
       this.logger.error('Bulk indexing failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Health check for Elasticsearch connectivity
+   */
+  async isHealthy(): Promise<{
+    healthy: boolean;
+    status?: string;
+    latencyMs?: number;
+    error?: string;
+  }> {
+    const start = Date.now();
+    try {
+      const health = await this.client.cluster.health();
+      return {
+        healthy: health.status !== 'red',
+        status: health.status,
+        latencyMs: Date.now() - start,
+      };
+    } catch (error) {
+      return { healthy: false, error: error.message };
+    }
+  }
+
+  /**
+   * Delete a document from the index (for rollback support)
+   */
+  async deleteDocument(id: string): Promise<void> {
+    try {
+      await this.client.delete({
+        index: this.indexName,
+        id,
+      });
+      this.logger.log(`Deleted document: ${id}`);
+    } catch (error) {
+      this.logger.error(`Failed to delete document ${id}:`, error);
       throw error;
     }
   }

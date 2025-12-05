@@ -19,7 +19,12 @@ interface ClientSession {
 
 @WebSocketGateway({
   cors: {
-    origin: true, // Allow all origins for development/testing
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:8080',
+      process.env.FRONTEND_URL,
+    ].filter(Boolean),
     credentials: true,
   },
   namespace: '/chat',

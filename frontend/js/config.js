@@ -5,7 +5,7 @@
 export const Config = Object.freeze({
   // API Endpoints
   API: {
-    BASE_URL: window.location.origin + '/rag',
+    BASE_URL: window.location.origin + '/v1/rag',
     WS_URL: window.location.origin,
     HEALTH_ENDPOINT: '/health',
     CONFIG_ENDPOINT: '/config',

@@ -28,33 +28,76 @@
 
         body {
             font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #0f0f1a;
+            background: #0a0a12;
             color: #f8fafc;
-            min-height: 100vh
+            min-height: 100vh;
+            min-height: 100dvh
         }
 
         .app {
             display: flex;
-            min-height: 100vh
+            min-height: 100vh;
+            min-height: 100dvh
         }
 
         .loading-screen {
             position: fixed;
             inset: 0;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            background: #0f0f1a;
-            z-index: 9999
+            gap: 1.5rem;
+            background: linear-gradient(180deg, #0a0a12 0%, #12121e 100%);
+            z-index: 9999;
+            transition: opacity 0.4s ease, visibility 0.4s ease
+        }
+
+        .loading-screen.hidden {
+            opacity: 0;
+            visibility: hidden
+        }
+
+        .loading-logo {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            box-shadow: 0 0 40px rgba(99, 102, 241, 0.4);
+            animation: logoPulse 2s ease-in-out infinite
+        }
+
+        @keyframes logoPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 40px rgba(99, 102, 241, 0.4)
+            }
+
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 60px rgba(99, 102, 241, 0.6)
+            }
         }
 
         .loading-spinner {
-            width: 48px;
-            height: 48px;
-            border: 3px solid rgba(99, 102, 241, 0.2);
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(99, 102, 241, 0.15);
             border-top-color: #6366f1;
             border-radius: 50%;
-            animation: spin 1s linear infinite
+            animation: spin 0.8s linear infinite
+        }
+
+        .loading-text {
+            font-size: 0.875rem;
+            color: #64748b;
+            letter-spacing: 0.05em
         }
 
         @keyframes spin {
@@ -82,10 +125,13 @@
 <body>
     <!-- Loading Screen -->
     <div class="loading-screen" id="loading-screen">
+        <div class="loading-logo">🤖</div>
         <div class="loading-spinner"></div>
+        <div class="loading-text">Initializing RAG Chat...</div>
     </div>
 
-    <div class="app" id="app" style="opacity:0">
+    <div class="app" id="app"
+        style="opacity:0;transform:translateY(10px);transition:opacity 0.5s ease, transform 0.5s ease">
         <!-- Background Effects -->
         <div class="bg-effects" aria-hidden="true"></div>
 
@@ -194,13 +240,38 @@
     <!-- Remove loading screen when app is ready -->
     <script>
         window.addEventListener('load', function () {
-            setTimeout(function () {
-                document.getElementById('loading-screen').style.opacity = '0';
-                document.getElementById('app').style.opacity = '1';
+            // Minimum loading time for smooth transition
+            const minLoadTime = 800;
+            const startTime = Date.now();
+
+            function showApp() {
+                const elapsed = Date.now() - startTime;
+                const remaining = Math.max(0, minLoadTime - elapsed);
+
                 setTimeout(function () {
-                    document.getElementById('loading-screen').style.display = 'none';
-                }, 300);
-            }, 100);
+                    const loadingScreen = document.getElementById('loading-screen');
+                    const app = document.getElementById('app');
+
+                    // Fade out loading screen
+                    loadingScreen.classList.add('hidden');
+
+                    // Show app with animation
+                    app.style.opacity = '1';
+                    app.style.transform = 'translateY(0)';
+
+                    // Remove loading screen from DOM after transition
+                    setTimeout(function () {
+                        loadingScreen.remove();
+                    }, 400);
+                }, remaining);
+            }
+
+            // Check if critical resources are loaded
+            if (document.readyState === 'complete') {
+                showApp();
+            } else {
+                window.addEventListener('DOMContentLoaded', showApp);
+            }
         });
     </script>
 </body>

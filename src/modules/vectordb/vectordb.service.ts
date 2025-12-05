@@ -188,4 +188,17 @@ export class VectorDbService {
       throw error;
     }
   }
+
+  /**
+   * Delete a document from the vector database (for rollback support)
+   */
+  async deleteDocument(id: string): Promise<void> {
+    try {
+      await this.index.deleteOne(id);
+      this.logger.log(`🗑️ Document deleted from Pinecone: ${id}`);
+    } catch (error) {
+      this.logger.error(`Failed to delete document ${id}:`, error);
+      throw error;
+    }
+  }
 }

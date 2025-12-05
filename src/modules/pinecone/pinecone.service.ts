@@ -141,4 +141,27 @@ export class PineconeService {
   getIndexName(): string {
     return this.indexName;
   }
+
+  /**
+   * Health check for Pinecone connectivity
+   */
+  async isHealthy(): Promise<{
+    healthy: boolean;
+    vectorCount?: number;
+    latencyMs?: number;
+    error?: string;
+  }> {
+    const start = Date.now();
+    try {
+      const index = this.pinecone.index(this.indexName);
+      const stats = await index.describeIndexStats();
+      return {
+        healthy: true,
+        vectorCount: stats.totalRecordCount || 0,
+        latencyMs: Date.now() - start,
+      };
+    } catch (error) {
+      return { healthy: false, error: error.message };
+    }
+  }
 }

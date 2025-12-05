@@ -10,7 +10,7 @@
 /* Tablet */
 @media (max-width: 1024px) {
     :root {
-        --sidebar-width: 220px;
+        --sidebar-width: 240px;
     }
 
     .stats-grid {
@@ -23,6 +23,7 @@
     :root {
         --sidebar-width: 100%;
         --header-height: 56px;
+        --input-height: 48px;
     }
 
     .app {
@@ -32,9 +33,11 @@
     .sidebar {
         position: fixed;
         transform: translateX(-100%);
-        width: 280px;
+        width: 300px;
+        max-width: 85vw;
         z-index: var(--z-modal);
-        box-shadow: 10px 0 40px rgba(0, 0, 0, 0.5);
+        box-shadow: 10px 0 50px rgba(0, 0, 0, 0.6);
+        transition: transform var(--transition-base) cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .sidebar.open {
@@ -44,12 +47,15 @@
     .sidebar-overlay {
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(4px);
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
         z-index: calc(var(--z-modal) - 1);
         opacity: 0;
         visibility: hidden;
-        transition: all var(--transition-base);
+        transition:
+            opacity var(--transition-base),
+            visibility var(--transition-base);
     }
 
     .sidebar-overlay.active {
@@ -84,6 +90,7 @@
 
     .message-content {
         padding: var(--space-sm) var(--space-md);
+        font-size: var(--text-sm);
     }
 
     .input-container {
@@ -92,20 +99,22 @@
     }
 
     .input-field {
-        min-height: 44px;
+        min-height: var(--input-height);
         padding: var(--space-sm) var(--space-md);
         font-size: 16px;
-        /* Prevents iOS zoom */
+        /* Prevents iOS zoom on focus */
     }
 
     #send-button {
-        width: 44px;
-        height: 44px;
+        width: var(--input-height);
+        height: var(--input-height);
     }
 
     .modal {
         width: 95%;
-        max-height: 85vh;
+        max-width: none;
+        max-height: 90vh;
+        margin: var(--space-md);
     }
 
     .modal-header,
@@ -154,12 +163,61 @@
     .message-content {
         padding: var(--space-sm) var(--space-md);
     }
+
+    .empty-state-icon {
+        font-size: 3rem;
+    }
+
+    .empty-state-title {
+        font-size: var(--text-lg);
+    }
+}
+
+/* Very small screens */
+@media (max-width: 360px) {
+    .message {
+        max-width: 95%;
+    }
+
+    .message-avatar {
+        width: 28px;
+        height: 28px;
+    }
+}
+
+/* Landscape mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+    .chat-container {
+        padding: var(--space-sm);
+    }
+
+    .messages {
+        padding: var(--space-xs);
+        gap: var(--space-sm);
+    }
+
+    .empty-state {
+        padding: var(--space-md);
+    }
+
+    .empty-state-icon {
+        font-size: 2rem;
+        margin-bottom: var(--space-sm);
+    }
 }
 
 /* Desktop Large */
 @media (min-width: 1440px) {
     :root {
-        --max-content-width: 1400px;
+        --max-content-width: 1100px;
+    }
+}
+
+/* Ultra-wide */
+@media (min-width: 1920px) {
+    :root {
+        --max-content-width: 1200px;
+        --sidebar-width: 320px;
     }
 }
 
@@ -169,7 +227,8 @@
     .sidebar,
     .header,
     .input-container,
-    .toast-container {
+    .toast-container,
+    .bg-effects {
         display: none !important;
     }
 
@@ -183,10 +242,15 @@
 
     .message {
         break-inside: avoid;
+        box-shadow: none;
+    }
+
+    body::before {
+        display: none;
     }
 }
 
-/* Reduced Motion */
+/* Reduced Motion - Accessibility */
 @media (prefers-reduced-motion: reduce) {
 
     *,
@@ -195,13 +259,63 @@
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .bg-effects::before {
+        animation: none;
     }
 }
 
-/* High Contrast */
+/* High Contrast - Accessibility */
 @media (prefers-contrast: high) {
     :root {
-        --border-secondary: rgba(255, 255, 255, 0.3);
-        --text-secondary: #c0c0c0;
+        --border-secondary: rgba(255, 255, 255, 0.4);
+        --text-secondary: #d0d0d0;
+        --text-muted: #a0a0a0;
+    }
+
+    .btn {
+        border: 2px solid currentColor;
+    }
+
+    .message-content {
+        border-width: 2px;
+    }
+}
+
+/* Dark mode preference (already dark, but ensure) */
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: dark;
+    }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .btn:hover::before {
+        transform: none;
+    }
+
+    .nav-item:hover {
+        transform: none;
+    }
+
+    .nav-item:hover::before {
+        height: 0;
+    }
+
+    .stat-card:hover {
+        transform: none;
+    }
+
+    /* Larger touch targets */
+    .btn-icon {
+        min-width: 48px;
+        min-height: 48px;
+    }
+
+    .nav-item {
+        padding: var(--space-md);
     }
 }

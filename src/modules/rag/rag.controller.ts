@@ -15,20 +15,29 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { RagService } from './rag.service';
 import { VectorDbService } from '../vectordb/vectordb.service';
+import { RedisService } from '../redis/redis.service';
+import { ElasticsearchService } from '../elasticsearch/elasticsearch.service';
+import { PineconeService } from '../pinecone/pinecone.service';
 import { UpdateInstructionsDto } from './dto/instruction.dto/instruction.dto';
 import { TrainDataDto } from './dto/train-data.dto/train-data.dto';
 import { TrainBatchDto } from './dto/train-batch.dto';
 import { ChatMessageDto } from './dto/chat.dto/chat.dto';
 import { Throttle } from '@nestjs/throttler';
+import { InjectDataSource } from '@nestjs/typeorm';
+import { DataSource } from 'typeorm';
 
 @ApiTags('rag')
-@Controller('rag')
+@Controller({ path: 'rag', version: '1' }) // API versioning: /v1/rag/*
 export class RagController {
   private readonly logger = new Logger(RagController.name);
 
   constructor(
     private readonly ragService: RagService,
     private readonly vectorDbService: VectorDbService,
+    private readonly redisService: RedisService,
+    private readonly elasticsearchService: ElasticsearchService,
+    private readonly pineconeService: PineconeService,
+    @InjectDataSource() private readonly dataSource: DataSource,
   ) {}
 
   /**
@@ -275,28 +284,66 @@ export class RagController {
   }
 
   /**
-   * GET /rag/health - Health check
+   * GET /rag/health - Comprehensive health check with dependency verification
    */
   @Get('health')
-  @ApiOperation({ summary: 'Health check' })
+  @ApiOperation({ summary: 'Comprehensive health check with all dependencies' })
   @ApiResponse({
     status: 200,
-    description: 'Service health status',
+    description: 'Service health status with dependency checks',
     schema: {
       type: 'object',
       properties: {
-        status: { type: 'string', example: 'ok' },
+        status: { type: 'string', example: 'healthy' },
         timestamp: { type: 'string', format: 'date-time' },
         service: { type: 'string', example: 'RAG Backend' },
+        dependencies: {
+          type: 'object',
+          properties: {
+            postgres: { type: 'object' },
+            redis: { type: 'object' },
+            elasticsearch: { type: 'object' },
+            pinecone: { type: 'object' },
+          },
+        },
       },
     },
   })
-  health() {
+  async health() {
+    const checks = await Promise.allSettled([
+      this.checkPostgres(),
+      this.redisService.isHealthy(),
+      this.elasticsearchService.isHealthy(),
+      this.pineconeService.isHealthy(),
+    ]);
+
+    const [postgres, redis, elasticsearch, pinecone] = checks.map((result) =>
+      result.status === 'fulfilled' ? result.value : { healthy: false, error: 'Check failed' },
+    );
+
+    const allHealthy = [postgres, redis, elasticsearch, pinecone].every((dep) => dep.healthy);
+
     return {
-      status: 'ok',
+      status: allHealthy ? 'healthy' : 'degraded',
       timestamp: new Date().toISOString(),
       service: 'RAG Backend',
+      dependencies: {
+        postgres,
+        redis,
+        elasticsearch,
+        pinecone,
+      },
     };
+  }
+
+  private async checkPostgres(): Promise<{ healthy: boolean; latencyMs?: number; error?: string }> {
+    const start = Date.now();
+    try {
+      await this.dataSource.query('SELECT 1');
+      return { healthy: true, latencyMs: Date.now() - start };
+    } catch (error) {
+      return { healthy: false, error: error.message };
+    }
   }
 
   /**

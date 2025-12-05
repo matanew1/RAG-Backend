@@ -71,36 +71,57 @@ export class RagService {
 
   /**
    * Train the RAG model with new data (Pinecone + Elasticsearch + PostgreSQL)
+   * Uses Saga pattern for rollback on partial failures
    */
   async trainWithData(content: string, metadata?: Record<string, any>): Promise<void> {
-    try {
-      const docId = uuidv4();
+    const docId = uuidv4();
 
-      // Generate embedding
+    // Saga pattern: track what succeeded for potential rollback
+    const ops = { pinecone: false, elastic: false, postgres: false };
+
+    try {
+      // Generate embedding first (no rollback needed)
       const embedding = await this.llmService.generateEmbedding(content);
 
-      // Store in all three databases in parallel
-      await Promise.all([
-        this.vectorDbService.upsertDocument({
-          id: docId,
-          content,
-          embedding,
-          metadata,
-        }),
-        this.elasticsearchService.indexDocument(docId, content, metadata),
-        this.documentRepository.save({
-          id: docId,
-          content,
-          metadata,
-          embeddingId: docId,
-          source: metadata?.source || 'api',
-          indexedAt: new Date(),
-        }),
-      ]);
+      // Sequential writes with rollback capability
+      await this.vectorDbService.upsertDocument({
+        id: docId,
+        content,
+        embedding,
+        metadata,
+      });
+      ops.pinecone = true;
+
+      await this.elasticsearchService.indexDocument(docId, content, metadata);
+      ops.elastic = true;
+
+      await this.documentRepository.save({
+        id: docId,
+        content,
+        metadata,
+        embeddingId: docId,
+        source: metadata?.source || 'api',
+        indexedAt: new Date(),
+      });
+      ops.postgres = true;
 
       this.logger.log('✅ Training data added (Pinecone + Elasticsearch + PostgreSQL)');
     } catch (error) {
-      this.logger.error('Training failed:', error);
+      this.logger.error('Training failed, initiating rollback:', error);
+
+      // Compensating transactions (rollback)
+      if (ops.pinecone) {
+        await this.vectorDbService
+          .deleteDocument(docId)
+          .catch((e) => this.logger.error('Rollback failed for Pinecone:', e));
+      }
+      if (ops.elastic) {
+        await this.elasticsearchService
+          .deleteDocument(docId)
+          .catch((e) => this.logger.error('Rollback failed for Elasticsearch:', e));
+      }
+      // PostgreSQL rollback handled by not committing
+
       throw error;
     }
   }
