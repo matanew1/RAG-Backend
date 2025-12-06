@@ -59,7 +59,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get user profile' })
   @ApiResponse({ status: 200, description: 'Return user profile' })
   getProfile(@Request() req) {
@@ -68,7 +68,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('logout')
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'User logout - invalidates the current token' })
   @ApiResponse({ status: 200, description: 'Successfully logged out' })
   async logout(@Headers('authorization') authHeader: string) {
@@ -81,7 +81,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('users/search')
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Search users via Elasticsearch' })
   @ApiQuery({ name: 'q', description: 'Search query', required: true })
   @ApiQuery({ name: 'limit', description: 'Max results', required: false })
@@ -93,7 +93,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Patch('users/:id/role')
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Update user role (Admin only)' })
   @ApiParam({ name: 'id', description: 'User ID' })
   @ApiResponse({ status: 200, description: 'User role updated successfully' })
@@ -119,7 +119,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @Get('users')
-  @ApiBearerAuth()
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'List all users (Admin only)' })
   @ApiQuery({ name: 'limit', description: 'Max results', required: false })
   @ApiQuery({ name: 'offset', description: 'Offset for pagination', required: false })

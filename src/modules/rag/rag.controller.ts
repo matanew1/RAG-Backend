@@ -40,7 +40,7 @@ import { Role } from '../auth/enums/role.enum';
 import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('rag')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @Controller({ path: 'rag', version: '1' }) // API versioning: /v1/rag/*
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class RagController {
