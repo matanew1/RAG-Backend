@@ -5,9 +5,11 @@ A powerful Retrieval-Augmented Generation (RAG) backend built with NestJS, featu
 ## 🚀 Features
 
 - **Real-time Chat**: WebSocket-based chat with streaming responses via Groq llama-3.3-70b-versatile
+- **JWT Authentication**: User registration, login, logout with token blacklisting via Redis
+- **API Versioning**: All endpoints use `/v1/` prefix for future compatibility
 - **Vector Database**: Pinecone integration for semantic search (384-dim embeddings, cosine similarity)
 - **Hybrid Search**: Elasticsearch + Pinecone parallel queries for optimal retrieval
-- **LLM Integration**: Groq (fast LLM) + HuggingFace (free embeddings)
+- **LLM Integration**: Groq (fast LLM) + HuggingFace (free embeddings via router.huggingface.co)
 - **Session Management**: Redis-backed distributed sessions with 1-hour TTL and local cache
 - **Persistent Storage**: PostgreSQL with TypeORM (User, Document, ChatHistory entities)
 - **Triple Persistence**: All training data indexed in Pinecone + Elasticsearch + PostgreSQL
@@ -86,6 +88,10 @@ Before running this application, make sure you have:
 
    # Elasticsearch Configuration (hybrid search with Pinecone)
    ELASTICSEARCH_URL=http://localhost:9200
+
+   # JWT Authentication
+   JWT_SECRET=your_super_secret_key_change_in_production
+   JWT_EXPIRATION=1h
 
    # Grafana Configuration
    GRAFANA_PASSWORD=admin
@@ -226,25 +232,32 @@ docker run -p 3001:3001 --env-file .env rag-backend
 
 Once the application is running, visit:
 - **Swagger UI**: http://localhost:8080/api (via Nginx - load balanced)
-- **Health Check**: http://localhost:8080/rag/health
+- **Health Check**: http://localhost:8080/v1/rag/health
 - **Direct Backend-1**: http://localhost:3001/api (development only)
 - **Direct Backend-2**: http://localhost:3002/api (development only)
 
 ### REST API Endpoints
 
-#### RAG Operations
-- `GET /rag/health` - Health check
-- `GET /rag/config` - Get current configuration
-- `PUT /rag/config` - Update RAG configuration
-- `POST /rag/train` - Train with single document
-- `POST /rag/train/batch` - Train with multiple documents
-- `POST /rag/session` - Create new chat session
-- `GET /rag/session/:id` - Get session information
-- `DELETE /rag/session/:id` - Delete session
-- `POST /rag/session/:id/clear` - Clear session history
-- `POST /rag/chat` - Send chat message (HTTP)
-- `GET /rag/index` - Get Pinecone index info and statistics
-- `GET /rag/index/documents` - List indexed documents
+#### Authentication (`/v1/auth/*`)
+- `POST /v1/auth/register` - Register new user
+- `POST /v1/auth/login` - Login and get JWT token
+- `POST /v1/auth/logout` - Logout and blacklist token (requires auth)
+- `GET /v1/auth/profile` - Get current user profile (requires auth)
+- `GET /v1/auth/users/search?q=query` - Search users via Elasticsearch (requires auth)
+
+#### RAG Operations (`/v1/rag/*`)
+- `GET /v1/rag/health` - Health check with dependency status
+- `GET /v1/rag/config` - Get current configuration
+- `PUT /v1/rag/config` - Update RAG configuration
+- `POST /v1/rag/train` - Train with single document
+- `POST /v1/rag/train/batch` - Train with multiple documents
+- `POST /v1/rag/session` - Create new chat session
+- `GET /v1/rag/session/:id` - Get session information
+- `DELETE /v1/rag/session/:id` - Delete session
+- `POST /v1/rag/session/:id/clear` - Clear session history
+- `POST /v1/rag/chat` - Send chat message (HTTP)
+- `GET /v1/rag/index` - Get Pinecone index info and statistics
+- `GET /v1/rag/index/documents` - List indexed documents
 
 ## 🌐 WebSocket Integration
 
@@ -291,18 +304,53 @@ Open `websocket-test.html` in your browser to interactively test WebSocket funct
 
 ```bash
 # Health check (via Nginx load balancer)
-curl http://localhost:8080/rag/health
+curl http://localhost:8080/v1/rag/health
+
+# ===== AUTHENTICATION =====
+
+# Register a new user
+curl -X POST http://localhost:8080/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "johndoe",
+    "email": "john@example.com",
+    "password": "password123",
+    "fullName": "John Doe"
+  }'
+
+# Login and get JWT token
+curl -X POST http://localhost:8080/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "johndoe",
+    "password": "password123"
+  }'
+# Returns: { "access_token": "eyJ...", "user": {...} }
+
+# Get user profile (requires auth)
+curl http://localhost:8080/v1/auth/profile \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Logout (blacklists token in Redis)
+curl -X POST http://localhost:8080/v1/auth/logout \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# Search users via Elasticsearch (requires auth)
+curl "http://localhost:8080/v1/auth/users/search?q=john&limit=10" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# ===== RAG OPERATIONS =====
 
 # Get configuration
-curl http://localhost:8080/rag/config
+curl http://localhost:8080/v1/rag/config
 
 # Create a chat session
-curl -X POST http://localhost:8080/rag/session \
+curl -X POST http://localhost:8080/v1/rag/session \
   -H "Content-Type: application/json" \
   -d '{}'
 
 # Send a chat message
-curl -X POST http://localhost:8080/rag/chat \
+curl -X POST http://localhost:8080/v1/rag/chat \
   -H "Content-Type: application/json" \
   -d '{
     "message": "Hello, how are you?",
@@ -310,7 +358,7 @@ curl -X POST http://localhost:8080/rag/chat \
   }'
 
 # Train with a document (indexes in Pinecone + Elasticsearch + PostgreSQL)
-curl -X POST http://localhost:8080/rag/train \
+curl -X POST http://localhost:8080/v1/rag/train \
   -H "Content-Type: application/json" \
   -d '{
     "content": "This is a sample document for training.",
@@ -321,7 +369,7 @@ curl -X POST http://localhost:8080/rag/train \
   }'
 
 # Train multiple documents in batch
-curl -X POST http://localhost:8080/rag/train/batch \
+curl -X POST http://localhost:8080/v1/rag/train/batch \
   -H "Content-Type: application/json" \
   -d '{
     "documents": [
@@ -359,13 +407,27 @@ src/
 ├── app.module.ts                 # Main application module
 ├── main.ts                       # Application bootstrap with crypto polyfill
 ├── config/
-│   ├── rag.config.ts             # Configuration settings
+│   ├── rag.config.ts             # Configuration settings (includes auth config)
 │   └── env.validation.ts         # Environment variable validation
 ├── modules/                      # Feature modules
+│   ├── auth/                     # JWT Authentication
+│   │   ├── auth.module.ts
+│   │   ├── auth.service.ts       # Login, register, token blacklist
+│   │   ├── auth.controller.ts    # /v1/auth/* endpoints
+│   │   ├── dto/
+│   │   │   ├── login.dto.ts
+│   │   │   └── register.dto.ts
+│   │   ├── guards/
+│   │   │   └── jwt-auth.guard.ts # Protects routes, checks Redis blacklist
+│   │   └── strategies/
+│   │       └── jwt.strategy.ts   # Passport JWT strategy
+│   ├── users/                    # User management
+│   │   ├── users.module.ts
+│   │   └── users.service.ts      # User CRUD + Elasticsearch indexing
 │   ├── database/                 # PostgreSQL + TypeORM
 │   │   ├── database.module.ts
 │   │   └── entities/
-│   │       ├── user.entity.ts
+│   │       ├── user.entity.ts    # Includes password field
 │   │       ├── document.entity.ts
 │   │       └── chat-history.entity.ts
 │   ├── elasticsearch/            # Elasticsearch integration
@@ -373,7 +435,7 @@ src/
 │   │   └── elasticsearch.service.ts
 │   ├── llm/                      # Groq + HuggingFace integration
 │   │   ├── llm.module.ts
-│   │   └── llm.service.ts
+│   │   └── llm.service.ts        # Uses router.huggingface.co for embeddings
 │   ├── pinecone/                 # Pinecone vector database
 │   │   ├── pinecone.module.ts
 │   │   ├── pinecone.service.ts
@@ -381,10 +443,14 @@ src/
 │   ├── rag/                      # RAG functionality
 │   │   ├── rag.module.ts
 │   │   ├── rag.service.ts        # Core RAG logic with hybrid search
-│   │   ├── rag.controller.ts     # REST endpoints
+│   │   ├── rag.controller.ts     # /v1/rag/* REST endpoints
 │   │   ├── rag.gateway.ts        # WebSocket gateway
+│   │   ├── services/             # Extracted services
+│   │   │   ├── retrieval.service.ts
+│   │   │   ├── session.service.ts
+│   │   │   └── training.service.ts
 │   │   └── dto/                  # Data transfer objects
-│   ├── redis/                    # Redis session management
+│   ├── redis/                    # Redis session & token blacklist
 │   │   ├── redis.module.ts
 │   │   └── redis.service.ts
 │   └── vectordb/                 # Vector database abstraction
@@ -392,7 +458,7 @@ src/
 │       ├── vectordb.service.ts
 │       └── interfaces/
 ├── docker-compose.yml            # Multi-service orchestration
-├── nginx.conf                    # Load balancer configuration
+├── nginx.conf                    # Load balancer with /v1/ routing
 └── create-index.ts               # Pinecone index creation script
 ```
 

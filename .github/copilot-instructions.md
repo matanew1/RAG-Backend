@@ -2,16 +2,20 @@
 
 ## Architecture Overview
 
-This is a **NestJS-based RAG (Retrieval-Augmented Generation) system** with real-time WebSocket chat, vector database integration, and LLM-powered responses.
+This is a **NestJS-based RAG (Retrieval-Augmented Generation) system** with real-time WebSocket chat, vector database integration, LLM-powered responses, and **JWT authentication**.
 
 **Core Architecture:**
 
+- **API Versioning**: URI-based versioning with `/v1/` prefix on all controllers
+- **JWT Authentication**: Passport-based auth with Redis token blacklisting
 - **3-Layer Service Pattern**: Controller → Service → Database/LLM layers
-- **Dual Communication**: REST API (`/rag/*`) + WebSocket (`/chat` namespace)
+- **Dual Communication**: REST API (`/v1/rag/*`, `/v1/auth/*`) + WebSocket (`/chat` namespace)
 - **Module Structure**: `RagModule` orchestrates `LlmModule`, `VectordbModule`, `PineconeModule`, `RedisModule`, and `ElasticsearchModule`
+- **Auth Module**: `AuthModule` handles JWT authentication with `UsersModule` and `RedisModule`
 - **Dependency Injection**: `VectorDbService` properly injects `PineconeService` (no duplicate clients)
 - **Environment Validation**: Startup validation ensures required env vars exist (see `src/config/env.validation.ts`)
 - **Session Management**: ✅ Redis-backed distributed sessions with local cache for performance
+- **Token Blacklisting**: ✅ Redis-backed JWT blacklist for secure logout
 - **Hybrid Search**: ✅ Parallel queries to Pinecone (semantic) + Elasticsearch (keyword) for optimal retrieval
 - **Production Deployment**: Nginx load balancer → 2 NestJS instances (see `docker-compose.yml`)
 
@@ -39,9 +43,43 @@ This is a **NestJS-based RAG (Retrieval-Augmented Generation) system** with real
 ### Embedding System
 
 - **HuggingFace embeddings**: 384-dimension vectors using `sentence-transformers/all-MiniLM-L6-v2` model
+- **API endpoint**: Uses `router.huggingface.co` (not deprecated `api-inference.huggingface.co`)
 - **Semantic search**: High-quality embeddings for accurate retrieval
 - **Pinecone index**: Must be 384 dimensions with cosine similarity metric
 - **Hybrid search**: Combines Pinecone semantic search + Elasticsearch keyword search
+
+### JWT Authentication (✅ Complete)
+
+- **Guard-based protection**: Use `@UseGuards(JwtAuthGuard)` on protected routes
+- **Token blacklisting**: Redis-backed blacklist checked on every protected request
+- **Password hashing**: BCrypt with 10 salt rounds
+- **Token storage**: Refresh tokens stored in Redis with TTL
+- **User indexing**: Users automatically indexed in Elasticsearch on registration
+
+**Auth Endpoints** (all under `/v1/auth/`):
+
+```
+POST /v1/auth/register  - User registration (public)
+POST /v1/auth/login     - User login, returns JWT (public)
+GET  /v1/auth/profile   - Get user profile (protected)
+POST /v1/auth/logout    - Logout, blacklists token (protected)
+GET  /v1/auth/users/search?q=query - Search users (protected)
+```
+
+**Using JwtAuthGuard**:
+
+```typescript
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+
+@Controller({ path: 'example', version: '1' })
+export class ExampleController {
+  @UseGuards(JwtAuthGuard)
+  @Get('protected')
+  getProtectedData(@Request() req) {
+    return { user: req.user }; // req.user contains decoded JWT payload
+  }
+}
+```
 
 ### Caching Strategy
 
@@ -74,9 +112,11 @@ pnpm test:e2e    # End-to-end tests with WebSocket
 - `HF_API_KEY`, `HF_EMBEDDING_MODEL` - Embedding model (HuggingFace all-MiniLM-L6-v2)
 - `EMBEDDING_DIMENSION` - Vector dimension (384)
 - `PINECONE_API_KEY`, `PINECONE_INDEX_NAME` - Vector database (384 dimensions)
-- `REDIS_HOST`, `REDIS_PORT` - Distributed session storage
+- `REDIS_HOST`, `REDIS_PORT` - Distributed session storage + token blacklist
 - `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` - PostgreSQL config
-- `ELASTICSEARCH_URL` - Elasticsearch for hybrid search
+- `ELASTICSEARCH_URL` - Elasticsearch for hybrid search + user search
+- `JWT_SECRET` - Secret key for JWT signing (required, min 32 chars)
+- `JWT_EXPIRATION` - Token expiration time (default: 1h)
 - `RAG_DEFAULT_INSTRUCTIONS` - System prompt for chatbot
 - `RAG_TOP_K` - Number of similar documents to retrieve (default: 5)
 
@@ -145,6 +185,7 @@ pnpm test:e2e    # End-to-end tests with WebSocket
 
 - **Upstream servers**: `rag-backend-1:3001`, `rag-backend-2:3001`
 - **Proxy setup**: All requests proxied with original headers preserved
+- **API routing**: Routes `/v1/rag/` and `/v1/auth/` to backend
 - **WebSocket support**: Configured in CORS settings in `main.ts` and `RagGateway`
 - **Session persistence**: Redis ensures sessions work across both backend instances
 
@@ -159,6 +200,7 @@ pnpm test:e2e    # End-to-end tests with WebSocket
 ### Elasticsearch Integration
 
 - **Index management**: Auto-creates `rag-documents` index on startup
+- **User indexing**: Users indexed in `users` index for search
 - **Hybrid search**: Full-text search complements Pinecone semantic search
 - **Bulk operations**: `bulkIndex()` for efficient batch document indexing
 - **Schema**: Maps `content`, `metadata`, `embedding_id`, and `timestamp`
