@@ -113,7 +113,7 @@ export class LlmService {
 
     try {
       const response = await fetch(
-        `https://api-inference.huggingface.co/pipeline/feature-extraction/${this.embeddingModel}`,
+        `https://router.huggingface.co/hf-inference/pipeline/feature-extraction/${this.embeddingModel}`,
         {
           method: 'POST',
           headers: {

@@ -11,8 +11,16 @@ import {
   HttpCode,
   HttpStatus,
   Logger,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { RagService } from './rag.service';
 import { VectorDbService } from '../vectordb/vectordb.service';
 import { RedisService } from '../redis/redis.service';
@@ -25,9 +33,16 @@ import { ChatMessageDto } from './dto/chat.dto/chat.dto';
 import { Throttle } from '@nestjs/throttler';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { Role } from '../auth/enums/role.enum';
+import { Public } from '../auth/decorators/public.decorator';
 
 @ApiTags('rag')
+@ApiBearerAuth()
 @Controller({ path: 'rag', version: '1' }) // API versioning: /v1/rag/*
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class RagController {
   private readonly logger = new Logger(RagController.name);
 
@@ -64,11 +79,12 @@ export class RagController {
   }
 
   /**
-   * PUT /rag/config - Update RAG instructions
+   * PUT /rag/config - Update RAG instructions (Admin only)
    */
   @Put('config')
+  @Roles(Role.ADMIN)
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Update RAG configuration' })
+  @ApiOperation({ summary: 'Update RAG configuration (Admin only)' })
   @ApiBody({ type: UpdateInstructionsDto })
   @ApiResponse({
     status: 200,
@@ -82,6 +98,8 @@ export class RagController {
       },
     },
   })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
   updateConfig(@Body() dto: UpdateInstructionsDto) {
     this.ragService.updateInstructions(dto.instructions);
 
@@ -95,11 +113,12 @@ export class RagController {
   }
 
   /**
-   * POST /rag/train - Train with single document
+   * POST /rag/train - Train with single document (Admin only)
    */
   @Post('train')
+  @Roles(Role.ADMIN)
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Train RAG system with single document' })
+  @ApiOperation({ summary: 'Train RAG system with single document (Admin only)' })
   @ApiBody({ type: TrainDataDto })
   @ApiResponse({
     status: 201,
@@ -112,6 +131,8 @@ export class RagController {
       },
     },
   })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
   async trainSingle(@Body() dto: TrainDataDto) {
     await this.ragService.trainWithData(dto.content, dto.metadata);
 
@@ -122,11 +143,12 @@ export class RagController {
   }
 
   /**
-   * POST /rag/train/batch - Train with multiple documents
+   * POST /rag/train/batch - Train with multiple documents (Admin only)
    */
   @Post('train/batch')
+  @Roles(Role.ADMIN)
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Train RAG system with multiple documents' })
+  @ApiOperation({ summary: 'Train RAG system with multiple documents (Admin only)' })
   @ApiBody({ type: TrainBatchDto })
   @ApiResponse({
     status: 201,
@@ -140,6 +162,8 @@ export class RagController {
       },
     },
   })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
   @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 per minute
   async trainBatch(@Body() dto: TrainBatchDto) {
     await this.ragService.trainBatch(dto.documents);
@@ -284,10 +308,11 @@ export class RagController {
   }
 
   /**
-   * GET /rag/health - Comprehensive health check with dependency verification
+   * GET /rag/health - Comprehensive health check with dependency verification (Public)
    */
   @Get('health')
-  @ApiOperation({ summary: 'Comprehensive health check with all dependencies' })
+  @Public()
+  @ApiOperation({ summary: 'Comprehensive health check with all dependencies (Public)' })
   @ApiResponse({
     status: 200,
     description: 'Service health status with dependency checks',
@@ -347,10 +372,11 @@ export class RagController {
   }
 
   /**
-   * GET /rag/index - Get Pinecone index info and statistics (consolidated)
+   * GET /rag/index - Get Pinecone index info and statistics (Admin only)
    */
   @Get('index')
-  @ApiOperation({ summary: 'Get Pinecone index info and statistics' })
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'Get Pinecone index info and statistics (Admin only)' })
   @ApiResponse({
     status: 200,
     description: 'Index info and statistics retrieved successfully',
@@ -373,6 +399,8 @@ export class RagController {
       },
     },
   })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
   async getIndex() {
     const [info, stats] = await Promise.all([
       this.vectorDbService.getIndexInfo(),
@@ -385,10 +413,11 @@ export class RagController {
   }
 
   /**
-   * GET /rag/index/documents - List documents in the index
+   * GET /rag/index/documents - List documents in the index (Admin only)
    */
   @Get('index/documents')
-  @ApiOperation({ summary: 'List documents in the Pinecone index' })
+  @Roles(Role.ADMIN)
+  @ApiOperation({ summary: 'List documents in the Pinecone index (Admin only)' })
   @ApiResponse({
     status: 200,
     description: 'Documents retrieved successfully',
@@ -412,6 +441,8 @@ export class RagController {
       },
     },
   })
+  @ApiResponse({ status: 401, description: 'Unauthorized - Invalid or missing token' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin role required' })
   async listDocuments(@Query('limit') limit: string = '50', @Query('offset') offset: string = '0') {
     const limitNum = Math.min(parseInt(limit) || 50, 100); // Max 100
     const offsetNum = parseInt(offset) || 0;

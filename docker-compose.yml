@@ -24,6 +24,8 @@ services:
       - DB_USER=raguser
       - DB_PASSWORD=${DB_PASSWORD}
       - REDIS_LAZY_CONNECT=true
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-1h}
     depends_on:
       redis:
         condition: service_healthy
@@ -71,6 +73,8 @@ services:
       - DB_USER=raguser
       - DB_PASSWORD=${DB_PASSWORD}
       - REDIS_LAZY_CONNECT=true
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-1h}
     depends_on:
       redis:
         condition: service_healthy

@@ -28,4 +28,8 @@ export default () => ({
   embedding: {
     dimension: parseInt(process.env.EMBEDDING_DIMENSION || '384', 10),
   },
+  auth: {
+    jwtSecret: process.env.JWT_SECRET || 'super-secret-key',
+    jwtExpiration: process.env.JWT_EXPIRATION || '1h',
+  },
 });

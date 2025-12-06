@@ -7,6 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { ChatHistory } from './chat-history.entity';
+import { Role } from '../../auth/enums/role.enum';
 
 @Entity('users')
 export class User {
@@ -19,8 +20,18 @@ export class User {
   @Column({ unique: true })
   email: string;
 
+  @Column({ select: false })
+  password: string;
+
   @Column({ nullable: true })
   fullName: string;
+
+  @Column({
+    type: 'varchar',
+    length: 20,
+    default: Role.USER,
+  })
+  role: Role;
 
   @Column({ default: true })
   isActive: boolean;

@@ -6,6 +6,7 @@ A powerful Retrieval-Augmented Generation (RAG) backend built with NestJS, featu
 
 - **Real-time Chat**: WebSocket-based chat with streaming responses via Groq llama-3.3-70b-versatile
 - **JWT Authentication**: User registration, login, logout with token blacklisting via Redis
+- **Role-Based Access Control (RBAC)**: User and Admin roles with guard-based protection
 - **API Versioning**: All endpoints use `/v1/` prefix for future compatibility
 - **Vector Database**: Pinecone integration for semantic search (384-dim embeddings, cosine similarity)
 - **Hybrid Search**: Elasticsearch + Pinecone parallel queries for optimal retrieval
@@ -14,8 +15,8 @@ A powerful Retrieval-Augmented Generation (RAG) backend built with NestJS, featu
 - **Persistent Storage**: PostgreSQL with TypeORM (User, Document, ChatHistory entities)
 - **Triple Persistence**: All training data indexed in Pinecone + Elasticsearch + PostgreSQL
 - **Monitoring**: Prometheus metrics collection with Grafana dashboards
-- **Document Training**: Batch and single document training with multi-database indexing
-- **RESTful API**: Complete HTTP API with Swagger documentation
+- **Document Training**: Batch and single document training with multi-database indexing (Admin only)
+- **RESTful API**: Complete HTTP API with Swagger documentation + Bearer auth
 - **Load Balanced**: Nginx reverse proxy (port 8080) with round-robin distribution to 2 backend instances
 - **TypeScript**: Full TypeScript support with strict typing
 - **Environment Validation**: Automatic validation of required environment variables on startup
@@ -239,25 +240,35 @@ Once the application is running, visit:
 ### REST API Endpoints
 
 #### Authentication (`/v1/auth/*`)
-- `POST /v1/auth/register` - Register new user
-- `POST /v1/auth/login` - Login and get JWT token
+- `POST /v1/auth/register` - Register new user (public)
+- `POST /v1/auth/login` - Login and get JWT token (public)
 - `POST /v1/auth/logout` - Logout and blacklist token (requires auth)
 - `GET /v1/auth/profile` - Get current user profile (requires auth)
 - `GET /v1/auth/users/search?q=query` - Search users via Elasticsearch (requires auth)
+- `GET /v1/auth/users` - List all users (admin only)
+- `PATCH /v1/auth/users/:id/role` - Update user role (admin only)
 
 #### RAG Operations (`/v1/rag/*`)
-- `GET /v1/rag/health` - Health check with dependency status
-- `GET /v1/rag/config` - Get current configuration
-- `PUT /v1/rag/config` - Update RAG configuration
-- `POST /v1/rag/train` - Train with single document
-- `POST /v1/rag/train/batch` - Train with multiple documents
-- `POST /v1/rag/session` - Create new chat session
-- `GET /v1/rag/session/:id` - Get session information
-- `DELETE /v1/rag/session/:id` - Delete session
-- `POST /v1/rag/session/:id/clear` - Clear session history
-- `POST /v1/rag/chat` - Send chat message (HTTP)
-- `GET /v1/rag/index` - Get Pinecone index info and statistics
-- `GET /v1/rag/index/documents` - List indexed documents
+All endpoints require authentication unless marked as public.
+- `GET /v1/rag/health` - Health check with dependency status (public)
+- `GET /v1/rag/config` - Get current configuration (requires auth)
+- `PUT /v1/rag/config` - Update RAG configuration (admin only)
+- `POST /v1/rag/train` - Train with single document (admin only)
+- `POST /v1/rag/train/batch` - Train with multiple documents (admin only)
+- `POST /v1/rag/session` - Create new chat session (requires auth)
+- `GET /v1/rag/session/:id` - Get session information (requires auth)
+- `DELETE /v1/rag/session/:id` - Delete session (requires auth)
+- `POST /v1/rag/session/:id/clear` - Clear session history (requires auth)
+- `POST /v1/rag/chat` - Send chat message (requires auth)
+- `GET /v1/rag/index` - Get Pinecone index info and statistics (admin only)
+- `GET /v1/rag/index/documents` - List indexed documents (admin only)
+
+### User Roles
+
+| Role | Description | Permissions |
+|------|-------------|-------------|
+| `user` | Regular user (default) | Chat, sessions, view config |
+| `admin` | Administrator | All user permissions + train system, update config, manage index, manage users |
 
 ## 🌐 WebSocket Integration
 

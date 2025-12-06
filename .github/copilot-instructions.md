@@ -51,19 +51,27 @@ This is a **NestJS-based RAG (Retrieval-Augmented Generation) system** with real
 ### JWT Authentication (✅ Complete)
 
 - **Guard-based protection**: Use `@UseGuards(JwtAuthGuard)` on protected routes
+- **Role-based access control**: Use `@UseGuards(JwtAuthGuard, RolesGuard)` + `@Roles(Role.ADMIN)` for admin-only
 - **Token blacklisting**: Redis-backed blacklist checked on every protected request
 - **Password hashing**: BCrypt with 10 salt rounds
 - **Token storage**: Refresh tokens stored in Redis with TTL
-- **User indexing**: Users automatically indexed in Elasticsearch on registration
+- **User indexing**: Users automatically indexed in Elasticsearch on registration (includes role)
+
+**User Roles**:
+
+- `Role.USER` (default): Can chat, manage sessions, view config
+- `Role.ADMIN`: All user permissions + train system, update config, manage index, manage users
 
 **Auth Endpoints** (all under `/v1/auth/`):
 
 ```
-POST /v1/auth/register  - User registration (public)
-POST /v1/auth/login     - User login, returns JWT (public)
-GET  /v1/auth/profile   - Get user profile (protected)
-POST /v1/auth/logout    - Logout, blacklists token (protected)
-GET  /v1/auth/users/search?q=query - Search users (protected)
+POST /v1/auth/register          - User registration (public)
+POST /v1/auth/login             - User login, returns JWT with role (public)
+GET  /v1/auth/profile           - Get user profile (protected)
+POST /v1/auth/logout            - Logout, blacklists token (protected)
+GET  /v1/auth/users/search?q=   - Search users (protected)
+GET  /v1/auth/users             - List all users (admin only)
+PATCH /v1/auth/users/:id/role   - Update user role (admin only)
 ```
 
 **Using JwtAuthGuard**:
@@ -76,7 +84,42 @@ export class ExampleController {
   @UseGuards(JwtAuthGuard)
   @Get('protected')
   getProtectedData(@Request() req) {
-    return { user: req.user }; // req.user contains decoded JWT payload
+    return { user: req.user }; // req.user contains { userId, username, role }
+  }
+}
+```
+
+**Using RolesGuard for Admin-Only Routes**:
+
+```typescript
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { Role } from '../auth/enums/role.enum';
+
+@Controller({ path: 'admin', version: '1' })
+@UseGuards(JwtAuthGuard, RolesGuard)
+export class AdminController {
+  @Roles(Role.ADMIN)
+  @Post('train')
+  trainSystem() {
+    // Only admins can access this
+  }
+}
+```
+
+**Making Routes Public** (skip auth):
+
+```typescript
+import { Public } from '../auth/decorators/public.decorator';
+
+@Controller({ path: 'rag', version: '1' })
+@UseGuards(JwtAuthGuard, RolesGuard)
+export class RagController {
+  @Public()
+  @Get('health')
+  healthCheck() {
+    // No auth required
   }
 }
 ```

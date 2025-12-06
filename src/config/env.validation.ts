@@ -46,6 +46,15 @@ class EnvironmentVariables {
   @IsOptional()
   RAG_MAX_HISTORY_LENGTH?: number;
 
+  // Auth Configuration
+  @IsString()
+  @IsNotEmpty()
+  JWT_SECRET: string;
+
+  @IsString()
+  @IsOptional()
+  JWT_EXPIRATION?: string;
+
   @IsNumber()
   @IsOptional()
   RAG_TEMPERATURE?: number;

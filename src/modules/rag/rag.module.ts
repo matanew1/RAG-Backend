@@ -8,6 +8,7 @@ import { LlmModule } from '../llm/llm.module';
 import { RedisModule } from '../redis/redis.module';
 import { ElasticsearchModule } from '../elasticsearch/elasticsearch.module';
 import { PineconeModule } from '../pinecone/pinecone.module';
+import { AuthModule } from '../auth/auth.module';
 import { ChatHistory, Document, User } from '../database/entities';
 import { SessionService, RetrievalService, TrainingService } from './services';
 
@@ -19,6 +20,7 @@ import { SessionService, RetrievalService, TrainingService } from './services';
     RedisModule,
     ElasticsearchModule,
     PineconeModule,
+    AuthModule,
   ],
   controllers: [RagController],
   providers: [RagService, RagGateway, SessionService, RetrievalService, TrainingService],
