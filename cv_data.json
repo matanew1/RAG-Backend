@@ -1,0 +1,501 @@
+{
+    "documents": [
+        {
+            "content": "Matan Bardugo is a Backend / Full-Stack Software Engineer based in Petah Tikva, Israel. He has 2 years of hands-on experience designing and implementing scalable microservices, API architecture, and end-to-end applications.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "profile_summary"
+            }
+        },
+        {
+            "content": "Contact Information: Phone: 054-910-5850, Email: matanew1@gmail.com, LinkedIn: https://www.linkedin.com/in/matan-bardugo-a2949b216, GitHub: https://github.com/matanew1",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "contact_info"
+            }
+        },
+        {
+            "content": "Technical Skills - Languages: Java, JavaScript, TypeScript, Python, SQL, NoSQL, HTML",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skills_languages"
+            }
+        },
+        {
+            "content": "Technical Skills - Backend Frameworks: Node.js, Nest.js, Flask, Spring Boot",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skills_backend"
+            }
+        },
+        {
+            "content": "Technical Skills - Frontend Frameworks: React.js, React Native, Next.js",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skills_frontend"
+            }
+        },
+        {
+            "content": "Technical Skills - Databases: MySQL, SQLite, MongoDB, PostgreSQL",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skills_databases"
+            }
+        },
+        {
+            "content": "Technical Skills - Cloud & Tools: Docker, Linux, Redis, Firebase, Postman, Jira, Confluence",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skills_tools"
+            }
+        },
+        {
+            "content": "Work Experience: Backend API Engineer at Cambium Applicable Innovation (07/2025 – Present). Designed and implemented RESTful microservices, ensuring clean architecture and secure third-party integrations. Developed API tooling with Nest.js and React (OpenAPI editors, validators, version managers) to standardize backend development. Contributed to multiple internal products with a focus on performance, reliability, and maintainability.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "experience_cambium"
+            }
+        },
+        {
+            "content": "Work Experience: Full-Stack Engineer at ASGARD Systems Ltd. (01/2025 – 07/2025). Built a real-time drone control application in React Native with live video streaming and communication. Delivered features in close collaboration with system engineers using modern UI/UX practices and CI workflows.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "experience_asgard"
+            }
+        },
+        {
+            "content": "Work Experience: System Validation and Backend Engineer at Silicom Ltd. (12/2023 – 01/2025). Automated network validation for routers, switches, and servers using Python and Bash. Developed backend testing tools using Python libraries including Pandas and Flask.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "experience_silicom"
+            }
+        },
+        {
+            "content": "Work Experience: QA Engineer at SVDS (06/2022 – 08/2023). Performed software quality assurance and API testing. Automated network reliability tests and database validations to improve product stability.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "experience_svds"
+            }
+        },
+        {
+            "content": "Education: B.Sc. in Software Engineering from Afeka Tel Aviv Academic College of Engineering. Achieved 1st Place Award for Final Project with a grade of 97.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "education"
+            }
+        },
+        {
+            "content": "Project: CyDog - Final Project (1st Place Award). A system for K9 units featuring real-time GPS tracking, live video streaming, voice commands, and mission management. Technologies used: Node.js, React.js, React Native, Socket.io, RF Protocol. GitHub: https://github.com/matanew1/CyDog-Final-Project",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "project_cydog"
+            }
+        },
+        {
+            "content": "Project: ParkingPark. A real-time parking availability application using municipal open data. Technologies used: Node.js, React.js, WebSocket, MongoDB, Docker, Firebase. GitHub: https://github.com/matanew1/ParkingPark, Website: https://parking-park-ai.netlify.app",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "project_parkingpark"
+            }
+        },
+        {
+            "content": "Matan Bardugo has strong hands-on background with Node.js, Nest.js, TypeScript, React, PostgreSQL, MongoDB, Python, and real-time systems. Proven ability to deliver clean architecture, high-quality APIs, and robust cloud-ready services in fast-paced Agile environments.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "expertise"
+            }
+        },
+        {
+            "content": "Matan Bardugo specializes in microservices architecture, RESTful API design, and real-time applications using WebSocket and Socket.io technologies.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "specializations"
+            }
+        },
+        {
+            "content": "Matan has experience with CI/CD workflows, Agile methodologies, and collaborative development practices using tools like Jira and Confluence.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "methodologies"
+            }
+        },
+        {
+            "content": "Matan Bardugo has worked on drone control systems, K9 unit management systems, parking availability platforms, and network validation automation tools throughout his career.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "domains"
+            }
+        },
+        {
+            "content": "Matan Bardugo is proficient in JavaScript and TypeScript for both frontend and backend development, using them extensively with Node.js, React, and Nest.js frameworks.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skill_javascript_typescript"
+            }
+        },
+        {
+            "content": "Matan Bardugo has experience with Python for backend development, automation, and data processing using libraries like Pandas and Flask.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skill_python"
+            }
+        },
+        {
+            "content": "Matan Bardugo is skilled in Java programming and has worked with Spring Boot for enterprise backend development.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skill_java"
+            }
+        },
+        {
+            "content": "Matan Bardugo has expertise in SQL databases including MySQL, SQLite, and PostgreSQL for relational data management.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skill_sql"
+            }
+        },
+        {
+            "content": "Matan Bardugo is experienced with NoSQL databases, particularly MongoDB, for flexible document-based data storage.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skill_nosql"
+            }
+        },
+        {
+            "content": "Matan Bardugo uses Docker for containerization and deployment of applications, ensuring consistent environments across development and production.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skill_docker"
+            }
+        },
+        {
+            "content": "Matan Bardugo has experience with Redis for caching and session management in high-performance applications.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skill_redis"
+            }
+        },
+        {
+            "content": "Matan Bardugo uses Firebase for authentication, real-time databases, and cloud functions in mobile and web applications.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skill_firebase"
+            }
+        },
+        {
+            "content": "Matan Bardugo is proficient in Linux environments for server administration, scripting, and development workflows.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skill_linux"
+            }
+        },
+        {
+            "content": "Matan Bardugo uses Postman for API testing, documentation, and collaboration during backend development.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skill_postman"
+            }
+        },
+        {
+            "content": "Matan Bardugo built real-time communication features using Socket.io for live data streaming and bidirectional event-based communication.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skill_socketio"
+            }
+        },
+        {
+            "content": "Matan Bardugo implemented WebSocket protocols for real-time parking data updates in the ParkingPark project.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skill_websocket"
+            }
+        },
+        {
+            "content": "Matan Bardugo developed mobile applications using React Native, including a drone control app with live video streaming capabilities.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skill_react_native"
+            }
+        },
+        {
+            "content": "Matan Bardugo built web applications using React.js with modern UI/UX practices and component-based architecture.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skill_react"
+            }
+        },
+        {
+            "content": "Matan Bardugo developed backend services using Nest.js framework, creating OpenAPI editors, validators, and version managers.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skill_nestjs"
+            }
+        },
+        {
+            "content": "Matan Bardugo has experience with Next.js for server-side rendering and building full-stack React applications.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "skill_nextjs"
+            }
+        },
+        {
+            "content": "At Cambium Applicable Innovation, Matan Bardugo focuses on designing RESTful microservices with clean architecture patterns and secure API integrations.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "job_detail_cambium_architecture"
+            }
+        },
+        {
+            "content": "At Cambium Applicable Innovation, Matan Bardugo develops API tooling including OpenAPI specification editors, API validators, and API version management systems.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "job_detail_cambium_tooling"
+            }
+        },
+        {
+            "content": "At ASGARD Systems, Matan Bardugo built a real-time drone control application featuring live video streaming and real-time communication systems.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "job_detail_asgard_drone"
+            }
+        },
+        {
+            "content": "At ASGARD Systems, Matan Bardugo collaborated with system engineers to deliver features using modern UI/UX practices and CI/CD workflows.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "job_detail_asgard_collaboration"
+            }
+        },
+        {
+            "content": "At Silicom Ltd, Matan Bardugo automated network validation processes for routers, switches, and servers using Python and Bash scripting.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "job_detail_silicom_automation"
+            }
+        },
+        {
+            "content": "At Silicom Ltd, Matan Bardugo developed backend testing tools using Python libraries including Pandas for data analysis and Flask for web services.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "job_detail_silicom_testing"
+            }
+        },
+        {
+            "content": "At SVDS, Matan Bardugo performed software quality assurance and API testing to ensure product reliability.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "job_detail_svds_qa"
+            }
+        },
+        {
+            "content": "At SVDS, Matan Bardugo automated network reliability tests and database validations to improve overall product stability.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "job_detail_svds_automation"
+            }
+        },
+        {
+            "content": "CyDog project features real-time GPS tracking for monitoring K9 unit locations during missions.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "project_cydog_gps"
+            }
+        },
+        {
+            "content": "CyDog project includes live video streaming capabilities for remote visual monitoring of K9 units in the field.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "project_cydog_video"
+            }
+        },
+        {
+            "content": "CyDog project supports voice commands for hands-free control and communication with K9 units.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "project_cydog_voice"
+            }
+        },
+        {
+            "content": "CyDog project provides mission management features for planning, executing, and tracking K9 unit operations.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "project_cydog_mission"
+            }
+        },
+        {
+            "content": "CyDog project uses RF Protocol for reliable wireless communication between the application and K9 unit hardware.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "project_cydog_rf"
+            }
+        },
+        {
+            "content": "ParkingPark project displays real-time parking availability information sourced from municipal open data APIs.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "project_parkingpark_realtime"
+            }
+        },
+        {
+            "content": "ParkingPark project is deployed on Netlify and accessible at https://parking-park-ai.netlify.app for public use.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "project_parkingpark_deployment"
+            }
+        },
+        {
+            "content": "ParkingPark project uses MongoDB for storing parking data and user information in a flexible document structure.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "project_parkingpark_database"
+            }
+        },
+        {
+            "content": "Matan Bardugo graduated from Afeka Tel Aviv Academic College of Engineering with a B.Sc. in Software Engineering.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "education_degree"
+            }
+        },
+        {
+            "content": "Matan Bardugo won 1st Place Award for his final project CyDog, demonstrating excellence in software engineering and innovation.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "education_award"
+            }
+        },
+        {
+            "content": "Matan Bardugo achieved a grade of 97 on his final project, reflecting high academic performance and technical proficiency.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "education_grade"
+            }
+        },
+        {
+            "content": "Matan Bardugo has 2 years of professional software engineering experience across multiple companies and roles.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "experience_years"
+            }
+        },
+        {
+            "content": "Matan Bardugo's career progression: QA Engineer (2022-2023) → System Validation Engineer (2023-2025) → Full-Stack Engineer (2025) → Backend API Engineer (2025-Present).",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "career_progression"
+            }
+        },
+        {
+            "content": "Matan Bardugo is available for contact via email at matanew1@gmail.com for job opportunities and professional inquiries.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "contact_email"
+            }
+        },
+        {
+            "content": "Matan Bardugo can be reached by phone at 054-910-5850 for urgent communications.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "contact_phone"
+            }
+        },
+        {
+            "content": "Matan Bardugo's LinkedIn profile is available at https://www.linkedin.com/in/matan-bardugo-a2949b216 for professional networking.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "contact_linkedin"
+            }
+        },
+        {
+            "content": "Matan Bardugo's GitHub profile at https://github.com/matanew1 showcases his open-source projects and code contributions.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "contact_github"
+            }
+        },
+        {
+            "content": "Matan Bardugo is based in Petah Tikva, Israel and is available for local opportunities in the Tel Aviv metropolitan area.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "location"
+            }
+        },
+        {
+            "content": "Matan Bardugo excels in API design and development, with experience creating RESTful services, OpenAPI specifications, and API documentation.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "strength_api_design"
+            }
+        },
+        {
+            "content": "Matan Bardugo has strong expertise in real-time systems, implementing live video streaming, GPS tracking, and WebSocket communications.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "strength_realtime"
+            }
+        },
+        {
+            "content": "Matan Bardugo demonstrates strong automation skills, having automated network validation, testing processes, and CI/CD workflows.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "strength_automation"
+            }
+        },
+        {
+            "content": "Matan Bardugo has proven ability to work in fast-paced Agile environments, delivering high-quality software iteratively.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "strength_agile"
+            }
+        },
+        {
+            "content": "Matan Bardugo focuses on clean architecture principles, ensuring maintainable, scalable, and testable codebases.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "strength_architecture"
+            }
+        },
+        {
+            "content": "Matan Bardugo has experience with third-party integrations, securely connecting applications to external APIs and services.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "strength_integrations"
+            }
+        },
+        {
+            "content": "Matan Bardugo is skilled in both mobile development (React Native) and web development (React.js, Next.js) for cross-platform solutions.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "strength_crossplatform"
+            }
+        },
+        {
+            "content": "Matan Bardugo has experience with network infrastructure, having worked with routers, switches, and servers at Silicom Ltd.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "domain_networking"
+            }
+        },
+        {
+            "content": "Matan Bardugo has experience in the defense/security sector, building drone control and K9 unit management systems.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "domain_defense"
+            }
+        },
+        {
+            "content": "Matan Bardugo has worked on smart city applications, developing real-time parking availability systems using municipal data.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "domain_smartcity"
+            }
+        },
+        {
+            "content": "Matan Bardugo has quality assurance background, performing software QA, API testing, and automated testing throughout his career.",
+            "metadata": {
+                "source": "Matan Bardugo CV.pdf",
+                "category": "domain_qa"
+            }
+        }
+    ]
+}
