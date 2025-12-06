@@ -23,7 +23,7 @@ export class User {
   @Column({ select: false })
   password: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'fullname', nullable: true })
   fullName: string;
 
   @Column({
@@ -33,13 +33,13 @@ export class User {
   })
   role: Role;
 
-  @Column({ default: true })
+  @Column({ name: 'isactive', default: true })
   isActive: boolean;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'createdat' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updatedat' })
   updatedAt: Date;
 
   @OneToMany(() => ChatHistory, (chatHistory) => chatHistory.user)

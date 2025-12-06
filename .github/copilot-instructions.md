@@ -43,7 +43,8 @@ This is a **NestJS-based RAG (Retrieval-Augmented Generation) system** with real
 ### Embedding System
 
 - **HuggingFace embeddings**: 384-dimension vectors using `sentence-transformers/all-MiniLM-L6-v2` model
-- **API endpoint**: Uses `router.huggingface.co` (not deprecated `api-inference.huggingface.co`)
+- **SDK**: Uses `@huggingface/inference` npm package (`InferenceClient.featureExtraction()`)
+- **Provider**: `hf-inference` (HuggingFace serverless inference)
 - **Semantic search**: High-quality embeddings for accurate retrieval
 - **Pinecone index**: Must be 384 dimensions with cosine similarity metric
 - **Hybrid search**: Combines Pinecone semantic search + Elasticsearch keyword search

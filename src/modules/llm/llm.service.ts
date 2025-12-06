@@ -2,6 +2,7 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Groq from 'groq-sdk';
+import { InferenceClient } from '@huggingface/inference';
 
 /**
  * Circuit Breaker State
@@ -16,12 +17,12 @@ interface CircuitBreakerState {
 export class LlmService {
   private readonly logger = new Logger(LlmService.name);
   private groq: Groq;
+  private hfClient: InferenceClient;
 
   // Cache config values to avoid repeated lookups
   private readonly model: string;
   private readonly embeddingModel: string;
   private readonly maxTokens: number;
-  private readonly hfApiKey: string;
 
   // Circuit Breaker configuration
   private readonly FAILURE_THRESHOLD = 5;
@@ -38,13 +39,16 @@ export class LlmService {
       apiKey: groqApiKey,
     });
 
+    // Initialize HuggingFace Inference client
+    const hfApiKey = this.configService.get<string>('llm.huggingface.apiKey') || '';
+    this.hfClient = new InferenceClient(hfApiKey);
+
     // Pre-cache config values
     this.model = this.configService.get<string>('llm.groq.model') || 'llama-3.3-70b-versatile';
     this.embeddingModel =
       this.configService.get<string>('llm.huggingface.embeddingModel') ||
       'sentence-transformers/all-MiniLM-L6-v2';
     this.maxTokens = this.configService.get<number>('rag.maxTokens') || 1024;
-    this.hfApiKey = this.configService.get<string>('llm.huggingface.apiKey') || '';
 
     this.logger.log(`✅ LLM Service initialized with Groq (${this.model})`);
   }
@@ -100,7 +104,7 @@ export class LlmService {
   }
 
   /**
-   * Generate embeddings using Hugging Face Inference API (free)
+   * Generate embeddings using Hugging Face Inference API
    * Using all-MiniLM-L6-v2 which outputs 384-dimensional vectors
    */
   async generateEmbedding(text: string): Promise<number[]> {
@@ -112,38 +116,23 @@ export class LlmService {
     }
 
     try {
-      const response = await fetch(
-        `https://router.huggingface.co/hf-inference/pipeline/feature-extraction/${this.embeddingModel}`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${this.hfApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            inputs: text,
-            options: { wait_for_model: true },
-          }),
-        },
-      );
+      const result = await this.hfClient.featureExtraction({
+        model: this.embeddingModel,
+        inputs: text,
+        provider: 'hf-inference',
+      });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        this.recordFailure('huggingface');
-        throw new Error(`Hugging Face API error: ${response.status} - ${errorText}`);
-      }
-
-      const embedding = await response.json();
       this.recordSuccess('huggingface');
 
-      // The API returns the embedding directly as an array
-      if (Array.isArray(embedding) && typeof embedding[0] === 'number') {
-        return embedding;
-      }
-
-      // Sometimes it's nested
-      if (Array.isArray(embedding) && Array.isArray(embedding[0])) {
-        return embedding[0];
+      // The result can be a 1D array (single embedding) or 2D array (batch)
+      // For single text input, we expect either number[] or number[][]
+      if (Array.isArray(result)) {
+        // If result is a 2D array (nested), return the first embedding
+        if (Array.isArray(result[0])) {
+          return result[0] as number[];
+        }
+        // If result is already a 1D array
+        return result as number[];
       }
 
       throw new Error('Unexpected embedding format from Hugging Face API');

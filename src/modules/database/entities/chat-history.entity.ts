@@ -14,11 +14,11 @@ export class ChatHistory {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ name: 'sessionid' })
   @Index()
   sessionId: string;
 
-  @Column({ nullable: true })
+  @Column({ name: 'userid', nullable: true })
   @Index()
   userId: string;
 
@@ -34,16 +34,16 @@ export class ChatHistory {
   @Column({ type: 'jsonb', nullable: true })
   context: string[];
 
-  @Column({ type: 'float', nullable: true })
+  @Column({ name: 'responsetime', type: 'float', nullable: true })
   responseTime: number;
 
-  @Column({ type: 'int', nullable: true })
+  @Column({ name: 'tokensused', type: 'int', nullable: true })
   tokensUsed: number;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'createdat' })
   createdAt: Date;
 
   @ManyToOne(() => User, (user) => user.chatHistories, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'userId' })
+  @JoinColumn({ name: 'userid' })
   user: User;
 }

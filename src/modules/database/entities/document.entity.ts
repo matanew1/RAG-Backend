@@ -18,7 +18,7 @@ export class Document {
   @Column({ type: 'jsonb', nullable: true })
   metadata: Record<string, any>;
 
-  @Column({ nullable: true })
+  @Column({ name: 'embeddingid', nullable: true })
   @Index()
   embeddingId: string;
 
@@ -28,15 +28,15 @@ export class Document {
   @Column({ type: 'float', nullable: true })
   score: number;
 
-  @Column({ default: true })
+  @Column({ name: 'isactive', default: true })
   isActive: boolean;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ name: 'createdat' })
   createdAt: Date;
 
-  @UpdateDateColumn()
+  @UpdateDateColumn({ name: 'updatedat' })
   updatedAt: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ name: 'indexedat', type: 'timestamp', nullable: true })
   indexedAt: Date;
 }
