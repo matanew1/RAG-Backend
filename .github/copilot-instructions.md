@@ -17,19 +17,50 @@ This is a **NestJS-based RAG (Retrieval-Augmented Generation) system** with real
 - **Session Management**: ✅ Redis-backed distributed sessions with local cache for performance
 - **Token Blacklisting**: ✅ Redis-backed JWT blacklist for secure logout
 - **Hybrid Search**: ✅ Parallel queries to Pinecone (semantic) + Elasticsearch (keyword) for optimal retrieval
+- **Conversation History**: ✅ Persistent conversations stored in PostgreSQL with full CRUD operations
 - **Production Deployment**: Nginx load balancer → 2 NestJS instances (see `docker-compose.yml`)
 
 **Data Flow:**
 
-1. User message → `RagGateway` (WebSocket) or `RagController` (REST)
+1. User message → `RagGateway` (WebSocket) or `RagController` (REST) or `ConversationController` (REST)
 2. `RagService` generates query embedding via `LlmService` using HuggingFace all-MiniLM-L6-v2
 3. `VectorDbService` searches Pinecone for relevant context via `PineconeService` (384-dim vectors)
 4. Parallel hybrid search in Elasticsearch for keyword-based results
 5. `LlmService` generates response using Groq llama-3.3-70b-versatile + retrieved context
 6. Response streamed back via WebSocket or returned via REST
 7. Session state persisted in Redis for multi-instance support
+8. Conversation and messages persisted in PostgreSQL for history retrieval
 
 ## Critical Components
+
+### Conversation System (✅ NEW - Persistent Chat History)
+
+- **Conversation entity**: Groups messages with title, userId, timestamps, messageCount
+- **ChatHistory entity**: Individual messages linked to conversations
+- **ConversationService**: Full CRUD + send message with history continuity
+- **ConversationController**: REST endpoints for conversation management
+
+**Conversation Endpoints** (all under `/v1/rag/conversations/`):
+
+```
+GET    /v1/rag/conversations              - List all conversations for user (paginated)
+POST   /v1/rag/conversations              - Create a new conversation
+GET    /v1/rag/conversations/:id          - Get conversation details
+GET    /v1/rag/conversations/:id/messages - Get all messages in conversation (paginated)
+PATCH  /v1/rag/conversations/:id          - Update conversation (rename, archive)
+DELETE /v1/rag/conversations/:id          - Delete conversation and all messages
+POST   /v1/rag/conversations/:id/messages - Send message in conversation (continue chat)
+POST   /v1/rag/conversations/:id/archive  - Archive a conversation
+POST   /v1/rag/conversations/:id/unarchive - Unarchive a conversation
+```
+
+**Key Features:**
+
+- **Auto-generated titles**: First message creates conversation title automatically
+- **Message history**: Load previous messages when continuing a conversation
+- **Streaming support**: Send `{ streaming: true }` to get SSE response
+- **User isolation**: Users can only see their own conversations
+- **Cascade delete**: Deleting a conversation removes all its messages
 
 ### Session Management (✅ Redis Integration Complete)
 

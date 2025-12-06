@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { User, Document, ChatHistory } from './entities';
+import { User, Document, ChatHistory, Conversation } from './entities';
 
 @Module({
   imports: [
@@ -17,7 +17,7 @@ import { User, Document, ChatHistory } from './entities';
           username: configService.get<string>('DB_USER') || 'raguser',
           password: configService.get<string>('DB_PASSWORD') || 'changeme',
           database: configService.get<string>('DB_NAME') || 'rag_backend',
-          entities: [User, Document, ChatHistory],
+          entities: [User, Document, ChatHistory, Conversation],
           synchronize: !isProduction, // Disable auto-sync in production - use migrations
           logging: !isProduction,
           ssl: false, // Disable SSL for local PostgreSQL
@@ -30,7 +30,7 @@ import { User, Document, ChatHistory } from './entities';
         };
       },
     }),
-    TypeOrmModule.forFeature([User, Document, ChatHistory]),
+    TypeOrmModule.forFeature([User, Document, ChatHistory, Conversation]),
   ],
   exports: [TypeOrmModule],
 })

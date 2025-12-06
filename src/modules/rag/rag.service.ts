@@ -462,6 +462,134 @@ export class RagService {
   }
 
   /**
+   * Chat with pre-loaded history (for conversation continuity)
+   * Used by ConversationService to continue existing conversations
+   */
+  async chatWithHistory(
+    message: string,
+    sessionId: string,
+    history: Array<{ role: string; content: string }>,
+  ): Promise<string> {
+    try {
+      // Fast path: Skip hybrid search if no training data exists
+      let allRelevantDocs: VectorSearchResult[] = [];
+
+      const hasIndexedData = await this.hasIndexedDocuments();
+
+      if (hasIndexedData) {
+        // Hybrid retrieval: Parallel search in Pinecone + Elasticsearch
+        const [vectorDocs, elasticsearchDocs] = await Promise.all([
+          this.vectorDbService.search(await this.llmService.generateEmbedding(message), this.topK),
+          this.elasticsearchService.search(message, this.topK),
+        ]);
+
+        // Merge results from both sources
+        const esDocsConverted: VectorSearchResult[] = elasticsearchDocs.map((doc) => ({
+          id: doc.id,
+          content: doc.content,
+          score: doc.score,
+          metadata: doc.metadata,
+        }));
+
+        allRelevantDocs = [...vectorDocs, ...esDocsConverted];
+        this.logger.log(
+          `🔍 Hybrid search: ${vectorDocs.length} vector + ${esDocsConverted.length} elastic results`,
+        );
+      }
+
+      // Deduplicate and rerank
+      const relevantDocs = this.fastDeduplicateAndRerank(allRelevantDocs, message);
+
+      // Build context
+      const context = this.buildContext(relevantDocs);
+
+      // Build messages from provided history
+      const messages = [
+        ...history.slice(-10).map((h) => ({ role: h.role, content: h.content })),
+        { role: 'user', content: message },
+      ];
+
+      // Generate response
+      const systemPrompt = this.buildSystemPrompt(this.globalInstructions, context);
+      const response = await this.llmService.generateResponse(
+        messages,
+        systemPrompt,
+        this.temperature,
+      );
+
+      this.logger.log(`💬 Chat response generated with history for session: ${sessionId}`);
+      return response;
+    } catch (error) {
+      this.logger.error('Chat with history failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Stream chat with pre-loaded history (for conversation continuity)
+   * Used by ConversationService to continue existing conversations
+   */
+  async *chatStreamWithHistory(
+    message: string,
+    sessionId: string,
+    history: Array<{ role: string; content: string }>,
+  ): AsyncGenerator<string> {
+    try {
+      // Fast path: Check if we have indexed data
+      const hasIndexedData = await this.hasIndexedDocuments();
+
+      let relevantDocs: VectorSearchResult[] = [];
+      let context = '';
+
+      if (hasIndexedData) {
+        // Hybrid search: parallel Pinecone + Elasticsearch
+        const [vectorDocs, elasticsearchDocs] = await Promise.all([
+          this.vectorDbService.search(await this.llmService.generateEmbedding(message), this.topK),
+          this.elasticsearchService.search(message, this.topK),
+        ]);
+
+        // Merge and deduplicate results
+        const allRelevantDocs = [
+          ...vectorDocs,
+          ...elasticsearchDocs.map((doc) => ({
+            id: doc.id,
+            content: doc.content,
+            metadata: doc.metadata,
+            score: doc.score || 0,
+          })),
+        ];
+        relevantDocs = this.fastDeduplicateAndRerank(allRelevantDocs, message);
+        context = this.buildContext(relevantDocs);
+      }
+
+      // Build messages from provided history
+      const messages = [
+        ...history.slice(-10).map((h) => ({ role: h.role, content: h.content })),
+        { role: 'user', content: message },
+      ];
+
+      // Build system prompt with context
+      const systemPrompt = this.buildSystemPrompt(this.globalInstructions, context);
+
+      // Stream response
+      const stream = this.llmService.generateStreamingResponse(
+        messages,
+        systemPrompt,
+        this.temperature,
+      );
+
+      for await (const chunk of stream) {
+        yield chunk;
+      }
+
+      this.logger.log(`💬 Streaming response generated with history for session: ${sessionId}`);
+    } catch (error) {
+      this.logger.error('Streaming chat with history failed:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Delete session (Redis-backed)
    */
   async deleteSession(sessionId: string): Promise<void> {

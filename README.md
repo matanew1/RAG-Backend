@@ -5,6 +5,7 @@ A powerful Retrieval-Augmented Generation (RAG) backend built with NestJS, featu
 ## 🚀 Features
 
 - **Real-time Chat**: WebSocket-based chat with streaming responses via Groq llama-3.3-70b-versatile
+- **Persistent Conversations**: Full conversation history with PostgreSQL (like ChatGPT/Claude)
 - **JWT Authentication**: User registration, login, logout with token blacklisting via Redis
 - **Role-Based Access Control (RBAC)**: User and Admin roles with guard-based protection
 - **API Versioning**: All endpoints use `/v1/` prefix for future compatibility
@@ -12,7 +13,7 @@ A powerful Retrieval-Augmented Generation (RAG) backend built with NestJS, featu
 - **Hybrid Search**: Elasticsearch + Pinecone parallel queries for optimal retrieval
 - **LLM Integration**: Groq (fast LLM) + HuggingFace (free embeddings via router.huggingface.co)
 - **Session Management**: Redis-backed distributed sessions with 1-hour TTL and local cache
-- **Persistent Storage**: PostgreSQL with TypeORM (User, Document, ChatHistory entities)
+- **Persistent Storage**: PostgreSQL with TypeORM (User, Document, ChatHistory, Conversation entities)
 - **Triple Persistence**: All training data indexed in Pinecone + Elasticsearch + PostgreSQL
 - **Monitoring**: Prometheus metrics collection with Grafana dashboards
 - **Document Training**: Batch and single document training with multi-database indexing (Admin only)
@@ -262,6 +263,25 @@ All endpoints require authentication unless marked as public.
 - `POST /v1/rag/chat` - Send chat message (requires auth)
 - `GET /v1/rag/index` - Get Pinecone index info and statistics (admin only)
 - `GET /v1/rag/index/documents` - List indexed documents (admin only)
+
+#### Conversation Management (`/v1/rag/conversations/*`)
+Persistent conversation history (like ChatGPT/Claude). All endpoints require authentication.
+- `GET /v1/rag/conversations` - List all conversations (paginated, with `?page=1&limit=20&includeArchived=false`)
+- `POST /v1/rag/conversations` - Create new conversation (`{ title?: string }`)
+- `GET /v1/rag/conversations/:id` - Get conversation details
+- `GET /v1/rag/conversations/:id/messages` - Get all messages in conversation (paginated)
+- `PATCH /v1/rag/conversations/:id` - Update conversation (rename, archive)
+- `DELETE /v1/rag/conversations/:id` - Delete conversation and all messages
+- `POST /v1/rag/conversations/:id/messages` - Send message in conversation (`{ message: string, streaming?: boolean }`)
+- `POST /v1/rag/conversations/:id/archive` - Archive a conversation
+- `POST /v1/rag/conversations/:id/unarchive` - Unarchive a conversation
+
+**Key Features:**
+- **Auto-generated titles**: First message creates conversation title automatically
+- **Message history**: Previous messages loaded for context when continuing a conversation
+- **Streaming support**: Send `{ streaming: true }` to get SSE response
+- **User isolation**: Users can only access their own conversations
+- **Cascade delete**: Deleting a conversation removes all its messages
 
 ### User Roles
 
